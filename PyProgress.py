@@ -1,7 +1,7 @@
 import ast
 import inspect
 import copy
-
+import dill
 
 def ast_to_list(node):
     """
@@ -148,72 +148,75 @@ class LoopTransformer(ast.NodeTransformer):
 
         return node
 
-    def visit_For(self, node):
-        """
-        'for loopIndex in range(len(x))'를 찾고,
-        본문 중 'accumVar += x[loopIndex]' 패턴을
-        -> accumVar = (accumVar / (loopIndex+1)) * len(x)
-        로 바꾸고, 그 직후에 div_map[accumVar]가 있다면
-        -> div_map[accumVar] = someVar
-        -> someVar = accumVar / (loopIndex+1)
-        """
-        # 하위 노드(=for 내부 statements)도 먼저 방문해서 변환
-        self.generic_visit(node)
+def visit_For(self, node):
+    """
+    'for loopIndex in range(len(x))' 를 찾고,
+    본문 중 'accumVar += x[loopIndex]' 패턴을
+      -> accumVar = (accumVar / (loopIndex+1)) * len(x)
+    로 바꾸고, 그 직후에 div_map[accumVar]가 있다면
+      -> someVar = accumVar / (loopIndex+1)
+    를 추가하는 로직.
+    """
+    print("Visit For")
+    print("DEBUG Assign:", ast.dump(node))
+    # 하위 노드(= for 내부 statements)도 먼저 방문해서 변환
+    self.generic_visit(node)
 
-        # 이 for문이 "for something in range(...)" 형태인지 확인
-        if not isinstance(node.target, ast.Name):
-            return node
-        loop_index_name = node.target.id  # 예: idx, i, etc.
+    # 이 for문이 "for something in range(...)" 형태인지 확인
+    if not isinstance(node.target, ast.Name):
+        return node
 
-        if not isinstance(node.iter, ast.Call):
-            return node
-        if not isinstance(node.iter.func, ast.Name) or node.iter.func.id != 'range':
-            return node
+    loop_index_name = node.target.id  # 예: idx, i 등
 
-        # range(...) 인자가 len(x)인지 간단 체크 (range(len(x)) 혹은 range(0, len(x)))
-        args = node.iter.args
-        if len(args) == 1:
-            # range(len(x))
-            len_call = args[0]
-        elif len(args) == 2:
-            # range(0, len(x))
-            len_call = args[1]
-        else:
-            return node
+    if not isinstance(node.iter, ast.Call):
+        return node
+    if not isinstance(node.iter.func, ast.Name) or node.iter.func.id != 'range':
+        return node
 
-        # len_call이 "len(x)" 형태인가?
-        if not (
-            isinstance(len_call, ast.Call)
-            and isinstance(len_call.func, ast.Name)
-            and len_call.func.id == 'len'
-            and len(len_call.args) == 1
-            and isinstance(len_call.args[0], ast.Name)
-            and len_call.args[0].id == 'x'
+    # range(...) 인자가 len(x)인지 간단 체크 (range(len(x)) 혹은 range(0, len(x)))
+    args = node.iter.args
+    if len(args) == 1:
+        # range(len(x))
+        len_call = args[0]
+    elif len(args) == 2:
+        # range(0, len(x))
+        len_call = args[1]
+    else:
+        return node
+
+    # len_call이 "len(x)" 형태인지?
+    if not (
+        isinstance(len_call, ast.Call)
+        and isinstance(len_call.func, ast.Name)
+        and len_call.func.id == 'len'
+        and len(len_call.args) == 1
+        and isinstance(len_call.args[0], ast.Name)
+        and len_call.args[0].id == 'x'
+    ):
+        return node
+
+    # 이제 body 내 statements에서 'accumVar += x[loop_index_name]' 찾기
+    new_body = []
+    for stmt in node.body:
+        if (
+            isinstance(stmt, ast.AugAssign)
+            and isinstance(stmt.op, ast.Add)
+            and isinstance(stmt.target, ast.Name)              # 누적변수
+            and isinstance(stmt.value, ast.Subscript)          # x[something]
+            and isinstance(stmt.value.value, ast.Name)
+            and stmt.value.value.id == 'x'
         ):
-            return node
+            # 파이썬 3.9+ 에선 slice가 Index(...) 노드 안에 들어 있음
+            slice_node = stmt.value.slice
+            if isinstance(slice_node, ast.Index):  
+                slice_node = slice_node.value  # 실제 idx는 slice_node.value
 
-        # 이제 body 내 statements 중
-        #   accumVar += x[loop_index_name]
-        # 찾기
-        new_body = []
-        for stmt in node.body:
-            if (
-                isinstance(stmt, ast.AugAssign)
-                and isinstance(stmt.op, ast.Add)
-                # target(좌변) = 어떤 변수(누적변수)
-                and isinstance(stmt.target, ast.Name)
-                # value(우변) = x[loop_index_name]
-                and isinstance(stmt.value, ast.Subscript)
-                and isinstance(stmt.value.value, ast.Name)  # x
-                and stmt.value.value.id == 'x'
-                and isinstance(stmt.value.slice, ast.Name)
-                and stmt.value.slice.id == loop_index_name
-            ):
+            # slice_node가 ast.Name(...) 형태인지 확인
+            if isinstance(slice_node, ast.Name) and slice_node.id == loop_index_name:
                 # 패턴 매칭 성공!
-                accum_var = stmt.target.id  # 누적변수 이름 (ex: accum)
+                accum_var = stmt.target.id  # 예: accum
 
                 # 1) accumVar = (accumVar / (loopIndex+1)) * len(x)
-                #    (간단히: sum = (sum/(i+1)) * len(x))
                 left_div = ast.BinOp(
                     left=ast.Name(id=accum_var, ctx=ast.Load()),
                     op=ast.Div(),
@@ -239,9 +242,9 @@ class LoopTransformer(ast.NodeTransformer):
                 )
                 new_body.append(new_assign_accum)
 
-                # 2) 만약 바깥에서 'someVar = accumVar / len(x)' 형태를 삭제했었다면,
-                #    self.div_map[accumVar] = someVar 로 기록되어 있음.
-                #    => 여기서 'someVar = accumVar / (loopIndex+1)' 추가.
+                # 2) 바깥(For 이전)에서 'someVar = accumVar / len(x)'가 삭제되었을 경우,
+                #    self.div_map[accum_var] = someVar 로 기록되어 있음.
+                #    => 'someVar = accumVar / (loopIndex+1)' 추가
                 if accum_var in self.div_map:
                     some_var = self.div_map[accum_var]
                     avg_value = ast.BinOp(
@@ -259,25 +262,44 @@ class LoopTransformer(ast.NodeTransformer):
                     )
                     new_body.append(new_assign_avg)
             else:
-                # 다른 구문은 그대로
+                # slice가 우리가 원하는 형태가 아님 => 변환하지 않고 그대로
                 new_body.append(stmt)
+        else:
+            # 다른 구문은 그대로
+            new_body.append(stmt)
 
-        node.body = new_body
-        return node
+    node.body = new_body
+    return node
+   
 
 
 def transform_decorator(func):
     """
     주어진 함수 `func`를 소스코드 -> AST 파싱 -> 변환 -> 재컴파일 -> 새 함수로 만드는 데코레이터.
     """
+    if getattr(func, '__transformed__', False):
+        return func
 
     source = inspect.getsource(func)
 
-    # 1) AST 파싱
-    tree = ast.parse(source)
+    
 
+    lines = source.split('\n')
+    filtered_lines = [
+        line
+        for line in lines
+        if not line.strip().startswith('@')
+    ]
+    new_source = '\n'.join(filtered_lines)
+
+    print(new_source)
+
+    # 1) AST 파싱
+    tree = ast.parse(new_source)
+    print(ast.dump(tree, indent=4))
     # 2) NodeTransformer 적용
     transformer = LoopTransformer()
+    print("visit start")
     new_tree = transformer.visit(tree)
     ast.fix_missing_locations(new_tree)
 
@@ -293,39 +315,10 @@ def transform_decorator(func):
     transformed_func.__doc__ = func.__doc__
     transformed_func.__module__ = func.__module__
 
+    transformed_func.__transformed__ = True
+
     return transformed_func
 
 
 
-
-@transform_decorator
-def my_function2(x):
-    accum = 0
-    for idx in range(len(x)):
-        accum += x[idx]
-    average = accum / len(x)  # -> 삭제됨
-    return average
-
-
-if __name__ == "__main__":
-    print(my_function2([10, 20, 30]))
-
-
-
-"""
-source = inspect.getsource(func)
-source2 = inspect.getsource(func2)
-tree = ast.parse(source)
-tree2 = ast.parse(source2)
-#print(source)
-
-print()
-#print(ast.dump(tree, indent = 4))
-#print()
-#print(ast.dump(tree2, indent = 4))
-
-
-print(ast_to_list(tree))
-print(ast.dump(list_to_ast(ast_to_list(tree)), indent = 4))
-"""
 
