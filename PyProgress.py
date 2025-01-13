@@ -119,6 +119,7 @@ class LoopTransformer(ast.NodeTransformer):
         -> (2) div_map[anotherVar] = someVar 로 기록
         """
         # 일단 하위 노드(=오른쪽 값 등)도 변환
+        print("Assign visit")
         self.generic_visit(node)
 
         # node.targets: 할당받는 대상 (list)
@@ -147,107 +148,77 @@ class LoopTransformer(ast.NodeTransformer):
                 return None
 
         return node
+    
+    def visit_For(self, node):
+        """
+        'for loopIndex in range(len(x))' 를 찾고,
+        본문 중 'accumVar += x[loopIndex]' 패턴을
+        -> accumVar = (accumVar / (loopIndex+1)) * len(x)
+        로 바꾸고, 그 직후에 div_map[accumVar]가 있다면
+        -> someVar = accumVar / (loopIndex+1)
+        를 추가하는 로직.
+        """
+        print("Visit For")
+        print("DEBUG Assign:", ast.dump(node))
+        # 하위 노드(= for 내부 statements)도 먼저 방문해서 변환
+        self.generic_visit(node)
 
-def visit_For(self, node):
-    """
-    'for loopIndex in range(len(x))' 를 찾고,
-    본문 중 'accumVar += x[loopIndex]' 패턴을
-      -> accumVar = (accumVar / (loopIndex+1)) * len(x)
-    로 바꾸고, 그 직후에 div_map[accumVar]가 있다면
-      -> someVar = accumVar / (loopIndex+1)
-    를 추가하는 로직.
-    """
-    print("Visit For")
-    print("DEBUG Assign:", ast.dump(node))
-    # 하위 노드(= for 내부 statements)도 먼저 방문해서 변환
-    self.generic_visit(node)
+        # 이 for문이 "for something in range(...)" 형태인지 확인
+        if not isinstance(node.target, ast.Name):
+            return node
 
-    # 이 for문이 "for something in range(...)" 형태인지 확인
-    if not isinstance(node.target, ast.Name):
-        return node
+        loop_index_name = node.target.id  # 예: idx, i 등
 
-    loop_index_name = node.target.id  # 예: idx, i 등
+        if not isinstance(node.iter, ast.Call):
+            return node
+        if not isinstance(node.iter.func, ast.Name) or node.iter.func.id != 'range':
+            return node
 
-    if not isinstance(node.iter, ast.Call):
-        return node
-    if not isinstance(node.iter.func, ast.Name) or node.iter.func.id != 'range':
-        return node
+        # range(...) 인자가 len(x)인지 간단 체크 (range(len(x)) 혹은 range(0, len(x)))
+        args = node.iter.args
+        if len(args) == 1:
+            # range(len(x))
+            len_call = args[0]
+        elif len(args) == 2:
+            # range(0, len(x))
+            len_call = args[1]
+        else:
+            return node
 
-    # range(...) 인자가 len(x)인지 간단 체크 (range(len(x)) 혹은 range(0, len(x)))
-    args = node.iter.args
-    if len(args) == 1:
-        # range(len(x))
-        len_call = args[0]
-    elif len(args) == 2:
-        # range(0, len(x))
-        len_call = args[1]
-    else:
-        return node
-
-    # len_call이 "len(x)" 형태인지?
-    if not (
-        isinstance(len_call, ast.Call)
-        and isinstance(len_call.func, ast.Name)
-        and len_call.func.id == 'len'
-        and len(len_call.args) == 1
-        and isinstance(len_call.args[0], ast.Name)
-        and len_call.args[0].id == 'x'
-    ):
-        return node
-
-    # 이제 body 내 statements에서 'accumVar += x[loop_index_name]' 찾기
-    new_body = []
-    for stmt in node.body:
-        if (
-            isinstance(stmt, ast.AugAssign)
-            and isinstance(stmt.op, ast.Add)
-            and isinstance(stmt.target, ast.Name)              # 누적변수
-            and isinstance(stmt.value, ast.Subscript)          # x[something]
-            and isinstance(stmt.value.value, ast.Name)
-            and stmt.value.value.id == 'x'
+        # len_call이 "len(x)" 형태인지?
+        if not (
+            isinstance(len_call, ast.Call)
+            and isinstance(len_call.func, ast.Name)
+            and len_call.func.id == 'len'
+            and len(len_call.args) == 1
+            and isinstance(len_call.args[0], ast.Name)
+            and len_call.args[0].id == 'x'
         ):
-            # 파이썬 3.9+ 에선 slice가 Index(...) 노드 안에 들어 있음
-            slice_node = stmt.value.slice
-            if isinstance(slice_node, ast.Index):  
-                slice_node = slice_node.value  # 실제 idx는 slice_node.value
+            return node
 
-            # slice_node가 ast.Name(...) 형태인지 확인
-            if isinstance(slice_node, ast.Name) and slice_node.id == loop_index_name:
-                # 패턴 매칭 성공!
-                accum_var = stmt.target.id  # 예: accum
+        # 이제 body 내 statements에서 'accumVar += x[loop_index_name]' 찾기
+        new_body = []
+        for stmt in node.body:
+            if (
+                isinstance(stmt, ast.AugAssign)
+                and isinstance(stmt.op, ast.Add)
+                and isinstance(stmt.target, ast.Name)              # 누적변수
+                and isinstance(stmt.value, ast.Subscript)          # x[something]
+                and isinstance(stmt.value.value, ast.Name)
+                and stmt.value.value.id == 'x'
+            ):
+                # 파이썬 3.9+ 에선 slice가 Index(...) 노드 안에 들어 있음
+                slice_node = stmt.value.slice
+                if isinstance(slice_node, ast.Index):  
+                    slice_node = slice_node.value  # 실제 idx는 slice_node.value
 
-                # 1) accumVar = (accumVar / (loopIndex+1)) * len(x)
-                left_div = ast.BinOp(
-                    left=ast.Name(id=accum_var, ctx=ast.Load()),
-                    op=ast.Div(),
-                    right=ast.BinOp(
-                        left=ast.Name(id=loop_index_name, ctx=ast.Load()),
-                        op=ast.Add(),
-                        right=ast.Constant(value=1)
-                    )
-                )
-                len_x_call = ast.Call(
-                    func=ast.Name(id='len', ctx=ast.Load()),
-                    args=[ast.Name(id='x', ctx=ast.Load())],
-                    keywords=[]
-                )
-                new_value = ast.BinOp(
-                    left=left_div,
-                    op=ast.Mult(),
-                    right=len_x_call
-                )
-                new_assign_accum = ast.Assign(
-                    targets=[ast.Name(id=accum_var, ctx=ast.Store())],
-                    value=new_value
-                )
-                new_body.append(new_assign_accum)
+                # slice_node가 ast.Name(...) 형태인지 확인
+                if isinstance(slice_node, ast.Name) and slice_node.id == loop_index_name:
+                    # 패턴 매칭 성공!
+                    accum_var = stmt.target.id  # 예: accum
 
-                # 2) 바깥(For 이전)에서 'someVar = accumVar / len(x)'가 삭제되었을 경우,
-                #    self.div_map[accum_var] = someVar 로 기록되어 있음.
-                #    => 'someVar = accumVar / (loopIndex+1)' 추가
-                if accum_var in self.div_map:
-                    some_var = self.div_map[accum_var]
-                    avg_value = ast.BinOp(
+                    # 1) accumVar = (accumVar / (loopIndex+1)) * len(x)
+                    left_div = ast.BinOp(
                         left=ast.Name(id=accum_var, ctx=ast.Load()),
                         op=ast.Div(),
                         right=ast.BinOp(
@@ -256,21 +227,53 @@ def visit_For(self, node):
                             right=ast.Constant(value=1)
                         )
                     )
-                    new_assign_avg = ast.Assign(
-                        targets=[ast.Name(id=some_var, ctx=ast.Store())],
-                        value=avg_value
+                    len_x_call = ast.Call(
+                        func=ast.Name(id='len', ctx=ast.Load()),
+                        args=[ast.Name(id='x', ctx=ast.Load())],
+                        keywords=[]
                     )
-                    new_body.append(new_assign_avg)
-            else:
-                # slice가 우리가 원하는 형태가 아님 => 변환하지 않고 그대로
-                new_body.append(stmt)
-        else:
-            # 다른 구문은 그대로
-            new_body.append(stmt)
+                    new_value = ast.BinOp(
+                        left=left_div,
+                        op=ast.Mult(),
+                        right=len_x_call
+                    )
+                    new_assign_accum = ast.Assign(
+                        targets=[ast.Name(id=accum_var, ctx=ast.Store())],
+                        value=new_value
+                    )
+                    new_body.append(new_assign_accum)
 
-    node.body = new_body
-    return node
-   
+                    # 2) 바깥(For 이전)에서 'someVar = accumVar / len(x)'가 삭제되었을 경우,
+                    #    self.div_map[accum_var] = someVar 로 기록되어 있음.
+                    #    => 'someVar = accumVar / (loopIndex+1)' 추가
+                    if accum_var in self.div_map:
+                        some_var = self.div_map[accum_var]
+                        avg_value = ast.BinOp(
+                            left=ast.Name(id=accum_var, ctx=ast.Load()),
+                            op=ast.Div(),
+                            right=ast.BinOp(
+                                left=ast.Name(id=loop_index_name, ctx=ast.Load()),
+                                op=ast.Add(),
+                                right=ast.Constant(value=1)
+                            )
+                        )
+                        new_assign_avg = ast.Assign(
+                            targets=[ast.Name(id=some_var, ctx=ast.Store())],
+                            value=avg_value
+                        )
+                        new_body.append(new_assign_avg)
+                else:
+                    # slice가 우리가 원하는 형태가 아님 => 변환하지 않고 그대로
+                    new_body.append(stmt)
+            else:
+                # 다른 구문은 그대로
+                new_body.append(stmt)
+
+        node.body = new_body
+        return node
+
+
+    
 
 
 def transform_decorator(func):
@@ -302,6 +305,7 @@ def transform_decorator(func):
     print("visit start")
     new_tree = transformer.visit(tree)
     ast.fix_missing_locations(new_tree)
+    print(ast.dump(new_tree, indent=4))
 
     # 3) compile -> exec
     code = compile(new_tree, filename="<ast-transform>", mode="exec")
