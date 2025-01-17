@@ -2,7 +2,8 @@ class Variable:
     def __init__(self, value):
         self.value = value
         self.projected = value
-        self.degree = None
+        self.degree = 0        
+        self.dependencies = []
 
     # def __add__(self, other):        
     #     if isinstance(other, Vector):
