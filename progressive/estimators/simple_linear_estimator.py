@@ -31,7 +31,7 @@ class SimpleLinearEstimator:
             history = self.history[-10:]
             m, c = linear_regression(history)
 
-            iter = (1 - c) / m
+            iter = (tick - c) / m
 
         iter = max(self.min_iter_count, int(iter))
         self.iter = iter    
