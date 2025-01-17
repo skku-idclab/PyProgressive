@@ -1,5 +1,6 @@
 from .expression import Addition, Division, Multiplication, Subtraction, PowerN
 
+# TODO: inherit from Node
 class Variable:
     def __init__(self, loop, expr):
         self.loop = loop

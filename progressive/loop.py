@@ -22,10 +22,19 @@ class Loop:
         v = Variable(self, value)
         self.variables.append(v)
         return v
-    
+
     def __exit__(self, *args):
+        # TODO: topological sort
+        # TODO: check for cycles
+        # TODO: flatten additions and subtractions        
+        # TODO: flatten multiplications
+        # TODO: check if each expr can be projected by BQs
+        
+                
         # compile
-        # run
+        
+        
+        # run with time estimators
         
         print(args)
         pass

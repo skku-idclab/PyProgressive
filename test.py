@@ -18,27 +18,20 @@ if __name__ == "__main__":
     # do we actually need to create a session?
     
     ps = pp.Session()
-    array = pp.Array([10, 20, 0, 21, 5, 42, 11, 14, 34, 13])
-    
-
-    
-    @ps.on("start")
-    def start_handler():
-        print("session start")
-
-    @ps.on("tick")
-    def tick_handler():
-        print("session tick")        
-        print(pssum)
-        
-    @ps.on("end")
-    def end_handler():
-        print("session end")            
+    array = pp.Array([10, 20, 0, 21, 5, 42, 11, 14, 34, 13])    
 
     with ps.loop(array, interval=1) as loop:
         psum = loop.add_variable(0)
         pssum = loop.add_variable(0)      
         
+        @loop.on("tick")
+        def tick_handler():
+            print(psum.value(), pssum.value())
+            
+        @loop.on("end")
+        def end_handler():
+            print(psum.value(), pssum.value())
+            
         for i in loop:                    
             print("a")
             # for j in loop:
