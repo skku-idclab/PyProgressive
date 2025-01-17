@@ -10,10 +10,10 @@ class Loop:
         self.array = array
         self.interval = interval
 
+        self.interperter_loop_in = False
         self.variables = []
         self.handlers = []
-        self.symbol = SpecialToken.LOOP_INDEX
-        self.has_yielded = False
+        self.symbol = SpecialToken.LOOP_INDEX        
     
     def __enter__(self):    
         return self
@@ -30,14 +30,19 @@ class Loop:
         print(args)
         pass
     
-    def __iter__(self):
+    def __iter__(self):        
+        if self.interperter_loop_in:                
+            raise "Nested loops are not supported!"
         return self
 
     def __next__(self):
-        if not self.has_yielded:
-            self.has_yielded = True
+        if not self.interperter_loop_in:
+            self.interperter_loop_in = True
+            
             return self.symbol 
         
+                   
+        self.interperter_loop_in = False        
         raise StopIteration  # Stop iteration after yielding once
 
     # def __iter__(self):
