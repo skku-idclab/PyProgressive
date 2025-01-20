@@ -3,6 +3,7 @@
 
 from .token import SpecialToken
 from .variable import Variable
+from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN
 
 class Loop:
     def __init__(self, session, array, interval=1):
@@ -30,14 +31,30 @@ class Loop:
         # TODO: flatten additions and subtractions        
         # TODO: flatten multiplications
         # TODO: check if each expr can be projected by BQs
-        
+
+
+        #1) topological sort
+        root_nodes = [var.expr for var in self.variables]
+
+        print("Root nodes:")
+        for node in root_nodes:
+            print(node)
+
+        # Sort the nodes in topological order
+        sorted_nodes = self._topological_sort(root_nodes)
+
+        print("Sorted nodes:")
+        for node in sorted_nodes:
+            print(node)
+
+
                 
         # compile
         
         
         # run with time estimators
         
-        print(args)
+        #print(args)
         pass
     
     def __iter__(self):        
@@ -96,3 +113,81 @@ class Loop:
         for event_name, handler in self.handlers:
             if event_name == event:
                 handler(*args)
+
+
+    def _get_children(self, node):
+        """
+        Returns a list of child nodes for the given node (Variable, Addition, etc.).
+
+        Args:
+            node (Node): The node for which to find children.
+
+        Returns:
+            list[Node]: A list of child nodes.
+        """
+        if isinstance(node, (Addition, Subtraction, Multiplication, Division)):
+            return [node.left, node.right]
+        elif isinstance(node, PowerN):
+            return [node.base, node.exponent]
+        elif isinstance(node, Variable):
+            # Variable also inherits from Node, but keeps its main expression in 'self.expr'.
+            if hasattr(node, "expr"):
+                return [node.expr]
+            else:
+                return []
+        else:
+            # For constants, tokens, or other terminal objects, no children.
+            return []
+
+
+    def _topological_sort(self, root_nodes):
+        """
+        Performs DFS-based topological sorting (with cycle detection) on
+        the expression graph formed by the root nodes.
+
+        Args:
+            root_nodes (list[Node]): A list of expression roots (e.g., psum.expr, pssum.expr).
+
+        Returns:
+            list[Node]: A list of nodes in topologically sorted order.
+
+        Raises:
+            RuntimeError: If a cycle is detected in the expression graph.
+        """
+        visited = set()
+        in_stack = set()  # Tracks nodes in the current DFS recursion path
+        sorted_list = []
+        self.has_cycle = False
+
+        def dfs(node):
+            if node in in_stack:
+                # Cycle found if the node is already in the current recursion stack
+                self.has_cycle = True
+                return
+            if node in visited:
+                # Skip nodes that have already been fully processed
+                return
+
+            in_stack.add(node)
+            visited.add(node)
+
+            # Visit child nodes (if they are Node instances)
+            for child in self._get_children(node):
+                if isinstance(child, Node):
+                    dfs(child)
+
+            in_stack.remove(node)
+            sorted_list.append(node)
+
+        # Start DFS from each root node
+        for root in root_nodes:
+            if root is not None and root not in visited:
+                dfs(root)
+
+        # If a cycle was detected, raise an error.
+        if self.has_cycle:
+            raise RuntimeError("Cycle detected in expression graph!")
+
+        # Reverse the list to get the proper topological order
+        sorted_list.reverse()
+        return sorted_list
