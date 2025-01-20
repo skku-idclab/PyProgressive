@@ -4,6 +4,7 @@
 from .token import SpecialToken
 from .variable import Variable
 from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN
+from .flatten_utils import flatten_add_sub
 
 class Loop:
     def __init__(self, session, array, interval=1):
@@ -46,6 +47,17 @@ class Loop:
         print("Sorted nodes:")
         for node in sorted_nodes:
             print(node)
+
+        #2) flatten additions and subtractions
+        for i, var in enumerate(self.variables):
+            self.variables[i].expr = flatten_add_sub(var.expr)
+
+        print("\nFlattened nodes:")
+        for i, var in enumerate(self.variables):
+            print(f"Variable {i}: {var.print()}")
+
+
+        
 
 
                 
