@@ -1,17 +1,3 @@
-import PyProgressive
-
-@PyProgressive.fy
-def my_function(x):
-    accum = 0
-    for idx in range(len(x)):
-        accum += x[idx]
-    
-    return accum
-
-# if __name__ == "__main__":
-#     test_list = [10, 20, 0, 21, 5, 42, 11, 14, 34, 13] # 분산: 127.2
-#     print(my_function(test_list))
-
 import progressive as pp
 
 if __name__ == "__main__":
@@ -33,7 +19,6 @@ if __name__ == "__main__":
             print(psum.value(), pssum.value())
             
         for i in loop:                    
-            print("a")
             # for j in loop:
             psum += array[i]
             # psum += i + 1
@@ -45,20 +30,15 @@ if __name__ == "__main__":
             # if array[i] > 5:
             #     if array[i] < 10:                    
             #         psum += 1                                
-                                                    
-        # print(len(array))
+        
         
         psum /= len(array)                
 
-        for i in loop:
-            print("b")
+        for i in loop:            
             pssum += (array[i] - psum) ** 2
 
         pssum /= len(array)
-
-        print(psum, pssum)
-
-
+    
         
 
     # loop = pp.Loop(data, tick=1)

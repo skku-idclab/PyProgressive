@@ -8,6 +8,9 @@ class SpecialToken(Enum):
 class DataItemToken():
     def __init__(self, array):
         self.array = array
+
+    def __str__(self):
+        return "d[i]"
         
 
 # len(d)

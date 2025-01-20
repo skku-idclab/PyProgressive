@@ -10,7 +10,7 @@ class Loop:
         self.array = array
         self.interval = interval
 
-        self.interperter_loop_in = False
+        self.cursor_in_loop = False
         self.variables = []
         self.handlers = []
         self.symbol = SpecialToken.LOOP_INDEX        
@@ -24,6 +24,7 @@ class Loop:
         return v
 
     def __exit__(self, *args):
+        self.variables[0].print()
         # TODO: topological sort
         # TODO: check for cycles
         # TODO: flatten additions and subtractions        
@@ -40,18 +41,17 @@ class Loop:
         pass
     
     def __iter__(self):        
-        if self.interperter_loop_in:                
+        if self.cursor_in_loop: 
             raise "Nested loops are not supported!"
         return self
 
     def __next__(self):
-        if not self.interperter_loop_in:
-            self.interperter_loop_in = True
+        if not self.cursor_in_loop:
+            self.cursor_in_loop = True
             
-            return self.symbol 
-        
+            return self.symbol         
                    
-        self.interperter_loop_in = False        
+        self.cursor_in_loop = False        
         raise StopIteration  # Stop iteration after yielding once
 
     # def __iter__(self):
