@@ -3,7 +3,7 @@
 
 from .token import SpecialToken
 from .variable import Variable
-from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN
+from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
 from .flatten_utils import flatten_add_sub
 
 class Loop:
@@ -27,6 +27,7 @@ class Loop:
 
     def __exit__(self, *args):
         self.variables[0].print()
+        self.variables[1].print()
         # TODO: topological sort
         # TODO: check for cycles
         # TODO: flatten additions and subtractions        
@@ -133,7 +134,7 @@ class Loop:
         Returns:
             list[Node]: A list of child nodes.
         """
-        if isinstance(node, (Addition, Subtraction, Multiplication, Division)):
+        if isinstance(node, (Addition, Subtraction, Multiplication, Division, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision)):
             return [node.left, node.right]
         elif isinstance(node, PowerN):
             return [node.base, node.exponent]
@@ -177,7 +178,7 @@ class Loop:
                 return
 
             in_stack.add(node)
-            visited.add(node)
+            
 
             # Visit child nodes (if they are Node instances)
             for child in self._get_children(node):
@@ -185,6 +186,8 @@ class Loop:
                     dfs(child)
 
             in_stack.remove(node)
+            visited.add(node)
+
             sorted_list.append(node)
 
         # Start DFS from each root node
@@ -197,5 +200,5 @@ class Loop:
             raise RuntimeError("Cycle detected in expression graph!")
 
         # Reverse the list to get the proper topological order
-        sorted_list.reverse()
+        #sorted_list.reverse()
         return sorted_list
