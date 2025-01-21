@@ -11,31 +11,31 @@ class Node:
         return Addition(self, other)
     
     def __radd__(self, other):
-        return Addition(other, self.expr)
+        return Addition(other, self)
 
 
     def __mul__(self, other):
-        return Multiplication(self.expr, other)
+        return Multiplication(self, other)
     
 
     def __rmul__(self, other):
-        return Multiplication(other, self.expr)
+        return Multiplication(other, self)
 
 
     def __sub__(self, other):
-        return Subtraction(self.expr, other)
+        return Subtraction(self, other)
     
     
     def __rsub__(self, other):
-        return Subtraction(other, self.expr)
+        return Subtraction(other, self)
 
 
     def __truediv__(self, other):
-        return Division(self.expr, other)
+        return Division(self, other)
                 
     
     def __rtruediv__(self, other):
-        return Division(other, self.expr)
+        return Division(other, self)
 
     def __pow__(self, other):
         if isinstance(other, int) and other > 0:

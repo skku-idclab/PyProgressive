@@ -1,14 +1,5 @@
-"""
-test_flatten.py
 
-A simple test script to demonstrate:
- - Creating a session and a loop,
- - Adding Variables,
- - Performing nested additions/subtractions,
- - Automatically flattening them when the loop context ends.
-"""
-
-import progressive as pp  # or your actual package name/path
+import progressive as pp  
 
 def test_flatten_operations():
     # Create a session
@@ -25,6 +16,9 @@ def test_flatten_operations():
 
         # Perform nested additions/subtractions on v1
         # For instance: v1 = 0 + (5 - (2 + 3))
+        for i in loop:
+            v1+=arr[i]
+
         v1 += 5
         v1 -= (2 + 3)
 
@@ -37,7 +31,7 @@ def test_flatten_operations():
         # We could also nest further if we want to test deeper flatten:
         # v2 = v2 + ((v1 + 2) - (5 + 4))
         #   => v2 = (10 + (v1 - 7)) + ((v1 + 2) - (5 + 4))
-        #v2 += ((v1 + 2) - (5 + 4))
+        v2 += ((v1 + 2) - (5 + 4))
 
         # Because of operator overloading, each line builds up the expression tree.
         # When we exit the 'with' block:
