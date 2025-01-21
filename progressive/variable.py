@@ -1,4 +1,5 @@
-from .expression import Addition, Division, Multiplication, Subtraction, PowerN, print_tree, Node
+from .expression import Addition, Division, Multiplication, Subtraction, PowerN, print_tree, Node, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision  
+
 
 class Variable(Node):
     def __init__(self, loop, expr):
@@ -6,19 +7,19 @@ class Variable(Node):
         self.expr = expr
     
     def __iadd__(self, other):        
-        self.expr = Addition(self.expr, other)
+        self.expr = InplaceAddition(self.expr, other, in_loop=self.loop.cursor_in_loop)
         return self    
     
     def __isub__(self, other):
-        self.expr = Subtraction(self.expr, other)
+        self.expr = InplaceSubtraction(self.expr, other, in_loop=self.loop.cursor_in_loop)
         return self    
     
     def __imul__(self, other):
-        self.expr = Multiplication(self.expr, other)
+        self.expr = InplaceMultiplication(self.expr, other, in_loop=self.loop.cursor_in_loop)
         return self
 
     def __itruediv__(self, other):
-        self.expr = Division(self.expr, other)
+        self.expr = InplaceDivision(self.expr, other, in_loop=self.loop.cursor_in_loop)
         return self
     
     def print(self):

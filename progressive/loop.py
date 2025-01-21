@@ -56,10 +56,6 @@ class Loop:
         for i, var in enumerate(self.variables):
             print(f"Variable {i}: {var.print()}")
 
-
-        
-
-
                 
         # compile
         

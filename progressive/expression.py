@@ -1,16 +1,14 @@
 
 class Node:
     """represents a node in the expression tree"""
-    def __init__(self, in_loop):
-        self.in_loop = in_loop
+    def __init__(self, expr):
+        self.expr = expr
 
     def __str__(self):
         return self.__class__.__name__
     
     def __add__(self, other):
         return Addition(self, other)
-
-
     
     def __radd__(self, other):
         return Addition(other, self.expr)
@@ -27,7 +25,6 @@ class Node:
     def __sub__(self, other):
         return Subtraction(self.expr, other)
     
-  
     
     def __rsub__(self, other):
         return Subtraction(other, self.expr)
@@ -46,34 +43,52 @@ class Node:
         
         raise ValueError("Only positive integer exponents are supported")
 
-class Addition(Node):
+class BinaryOperationNode(Node):
     def __init__(self, left, right):
         self.left = left
         self.right = right
 
-class InplaceAddition(Node):
-    def __init__(self, right):
-        self.right = right
-
-class Multiplication(Node):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-        
-class Subtraction(Node):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
     
-class Division(Node):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+class Addition(BinaryOperationNode):
+    pass
         
+class Subtraction(BinaryOperationNode):
+    pass
+
+class Multiplication(BinaryOperationNode):
+    pass
+
+class Division(BinaryOperationNode):
+    pass
+
 class PowerN(Node):
     def __init__(self, base, exponent):
         self.base = base
         self.exponent = exponent
+
+
+class InplaceOperationNode(Node):
+    def __init__(self, left, right, in_loop):
+        self.left = left
+        self.right = right
+        self.in_loop = in_loop
+
+    def __str__(self):        
+        return f"{self.__class__.__name__} {'in loop' if self.in_loop else ''}"
+    
+class InplaceAddition(InplaceOperationNode):
+    pass
+        
+class InplaceSubtraction(InplaceOperationNode):
+    pass
+
+class InplaceMultiplication(InplaceOperationNode):
+    pass
+
+class InplaceDivision(InplaceOperationNode):
+    pass
+
+
         
 
 def print_tree(node, level=0):
@@ -88,13 +103,14 @@ def print_tree(node, level=0):
         return
 
     # Print the current node with indentation
-    print("    " * level + f"{node}")
+    print("--" * level + f"{node}")
 
     # Recursively print left and right children if they exist
     if isinstance(node, (Addition, Subtraction, Multiplication, Division)):
         print_tree(node.left, level + 1)
         print_tree(node.right, level + 1)
-    elif isinstance(node, InplaceAddition):
+    elif isinstance(node, (InplaceAddition, InplaceDivision, InplaceMultiplication, InplaceSubtraction)):
+        print_tree(node.left, level + 1)
         print_tree(node.right, level + 1)
     elif isinstance(node, PowerN):
         print_tree(node.base, level + 1)
