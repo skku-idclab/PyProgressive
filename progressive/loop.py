@@ -5,6 +5,7 @@ from .token import SpecialToken
 from .variable import Variable
 from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
 from .flatten_utils import flatten_add_sub
+from .sympy_transform import flatten_with_sympy
 
 class Loop:
     def __init__(self, session, array, interval=1):
@@ -27,7 +28,7 @@ class Loop:
 
     def __exit__(self, *args):
         self.variables[0].print()
-        self.variables[1].print()
+        #self.variables[1].print()
         # TODO: topological sort
         # TODO: check for cycles
         # TODO: flatten additions and subtractions        
@@ -49,14 +50,14 @@ class Loop:
         for node in sorted_nodes:
             print(node)
 
-        #2) flatten additions and subtractions
-        for i, var in enumerate(self.variables):
-            self.variables[i].expr = flatten_add_sub(var.expr)
+        #2) flatten each variable by using Sympy
+        for var in self.variables:
+            var.expr = flatten_with_sympy(var.expr)
 
-        print("\nFlattened nodes:")
-        for i, var in enumerate(self.variables):
-            print(f"Variable {i}: {var.print()}")
-
+        print("=== After Flatten with Sympy ===")
+        for i, v in enumerate(self.variables, start=1):
+            print(f"Variable {i}: {v.expr}")
+       
                 
         # compile
         

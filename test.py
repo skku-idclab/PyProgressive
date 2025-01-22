@@ -20,7 +20,7 @@ if __name__ == "__main__":
             
         for i in loop:                    
             # for j in loop:
-            psum += array[i]
+            psum += (4*array[i]) -1
             # psum += i + 1
             
             # array[i+1]
