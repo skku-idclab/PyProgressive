@@ -27,7 +27,7 @@ class Loop:
         return v
 
     def __exit__(self, *args):
-        self.variables[0].print()
+        #self.variables[0].print()
         #self.variables[1].print()
         # TODO: topological sort
         # TODO: check for cycles
@@ -39,16 +39,16 @@ class Loop:
         #1) topological sort
         root_nodes = [var.expr for var in self.variables]
 
-        print("Root nodes:")
-        for node in root_nodes:
-            print(node)
+        #print("Root nodes:")
+        # for node in root_nodes:
+        #     print(node)
 
         # Sort the nodes in topological order
         sorted_nodes = self._topological_sort(root_nodes)
 
-        print("Sorted nodes:")
-        for node in sorted_nodes:
-            print(node)
+        # print("Sorted nodes:")
+        # for node in sorted_nodes:
+        #     print(node)
 
         #2) flatten each variable by using Sympy
         for var in self.variables:

@@ -20,7 +20,7 @@ if __name__ == "__main__":
             
         for i in loop:                    
             # for j in loop:
-            psum += (4*array[i]) -1
+            psum += (4*array[i] -1)**2
             # psum += i + 1
             
             # array[i+1]
@@ -34,8 +34,8 @@ if __name__ == "__main__":
         
         psum /= len(array)                
 
-        for i in loop:            
-            pssum += (array[i] - psum) ** 2
+        # for i in loop:            
+        #     pssum += (array[i] - psum) ** 2
 
         pssum /= len(array)
     

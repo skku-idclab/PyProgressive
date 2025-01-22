@@ -14,6 +14,9 @@ from .expression import (
 from .variable import Variable
 from .token import DataItemToken
 
+
+token_map = {}
+
 def node_to_string(node):
     """
     Convert our Node (including Inplace nodes) into a string
@@ -27,7 +30,10 @@ def node_to_string(node):
 
     # 2) Token or Variable?
     if isinstance(node, DataItemToken):
-        return "arr_i"  # 예: array[i] -> arr_i (단순 가정)
+        #symbol_name = f"arr_{id(node.array)}"
+        symbol_name = "arr_i"
+        token_map[symbol_name] = node.array
+        return symbol_name  # 예: array[i] -> arr_1244313 (단순 가정)
     if isinstance(node, Variable):
         # Variable 내부의 expr를 문자열로 변환
         return f"({node_to_string(node.expr)})"
@@ -81,6 +87,9 @@ def sympy_to_node(expr):
     if isinstance(expr, sympy.Symbol):
         name = str(expr)
         if name.startswith("arr_"):
+            if name in token_map:
+                print("token_map[name]: ", token_map[name].data)
+                return DataItemToken(token_map[name])
             return DataItemToken()
         # 그외는 임시로 Variable(None, 0) 등으로 처리. 추후 수정 필요
         return Variable(None, 0)
@@ -117,6 +126,12 @@ def sympy_to_node(expr):
     # Division, Subtraction을 Add/Mul로 표현하는 Sympy 내부 구조에 따라,
     # (a-b) => Add(a, -b), (a/b) => Mul(a, b^-1)
 
+    if isinstance(expr, sympy.Rational):
+        return Division(sympy_to_node(expr.p), sympy_to_node(expr.q))
+    
+    if isinstance(expr, int):
+        return expr
+
     raise TypeError(f"Unsupported sympy expr type: {type(expr)} => {expr}")
 
 
@@ -132,4 +147,4 @@ def flatten_with_sympy(root_node):
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
     print(f"expanded expr: {expanded_expr}")
-    # return sympy_to_node(expanded_expr)
+    return sympy_to_node(expanded_expr)
