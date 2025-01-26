@@ -3,7 +3,7 @@
 
 from .token import SpecialToken
 from .variable import Variable
-from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
+from .expression import Constantized, Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
 from .flatten_utils import flatten_add_sub
 from .sympy_transform import flatten_with_sympy
 
@@ -27,8 +27,10 @@ class Loop:
         return v
 
     def __exit__(self, *args):
-        #self.variables[0].print()
-        #self.variables[1].print()
+        # run after the entire block 
+        
+        self.variables[0].print()
+        self.variables[1].print()
         # TODO: topological sort
         # TODO: check for cycles
         # TODO: flatten additions and subtractions        
@@ -77,7 +79,16 @@ class Loop:
             self.cursor_in_loop = True
             
             return self.symbol         
-                   
+
+        # run after each loop
+        
+        # constantize all variables if they are not
+        for var in self.variables:
+            if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node):
+                var.expr = Constantized(var.expr)
+            
+            
+        
         self.cursor_in_loop = False        
         raise StopIteration  # Stop iteration after yielding once
 
@@ -203,3 +214,4 @@ class Loop:
         # Reverse the list to get the proper topological order
         #sorted_list.reverse()
         return sorted_list
+    

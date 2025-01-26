@@ -5,7 +5,7 @@ from sympy import sympify, expand
 
 # expression.py 안에 있는 클래스들 import
 from .expression import (
-    Node, BinaryOperationNode, Addition, Subtraction,
+    Constantized, Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
     InplaceMultiplication, InplaceDivision
@@ -71,6 +71,13 @@ def node_to_string(node):
         exp_str = node_to_string(node.exponent)
         return f"({base_str} ** {exp_str})"
 
+    # 6) Constantized
+    if isinstance(node, Constantized):
+        # TODO: handle Constantized node 
+        expr_str = node_to_string(node.expr)
+        
+        return f"{expr_str}" # 일단은 expr만 반환
+    
     # 혹은 Node.__init__(expr)를 활용하는 경우,
     # node.expr를 문자열 변환해서 반환가능
     # 하지만 BinaryOperationNode 등은 이미 left/right를 쓰므로 생략.
