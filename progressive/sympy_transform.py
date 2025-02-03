@@ -16,7 +16,7 @@ from .token import DataItemToken
 
 
 token_map = {}
-
+constantized_map = {}
 def node_to_string(node):
     """
     Convert our Node (including Inplace nodes) into a string
@@ -74,9 +74,11 @@ def node_to_string(node):
     # 6) Constantized
     if isinstance(node, Constantized):
         # TODO: handle Constantized node 
+        label = f"Constantized_var{node.id}"
+        constantized_map[label] = node.expr
         expr_str = node_to_string(node.expr)
-        
-        return f"{expr_str}" # 일단은 expr만 반환
+        return label
+        #return f"{expr_str}" # 일단은 expr만 반환
     
     # 혹은 Node.__init__(expr)를 활용하는 경우,
     # node.expr를 문자열 변환해서 반환가능
@@ -93,6 +95,12 @@ def sympy_to_node(expr):
     """
     if isinstance(expr, sympy.Symbol):
         name = str(expr)
+        if name.startswith("Constantized_var"):
+            inner_expr = constantized_map[name]
+            if inner_expr is None:
+                raise ValueError(f"Constantized node '{name}' has no inner expression")
+            else:
+                return Constantized(inner_expr)
         if name.startswith("arr_"):
             if name in token_map:
                 print("token_map[name]: ", token_map[name].data)

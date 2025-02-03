@@ -93,8 +93,15 @@ class InplaceDivision(InplaceOperationNode):
 
 
 class Constantized(Node):
+    _counter = 0
+
+    def __init__(self, expr):
+        super().__init__(expr)
+        self.expr = expr
+        self.id = Constantized._counter
+        Constantized._counter += 1
     def __str__(self):
-        return f"Constantized"
+        return f"Constantized_var{self.id}"
 
 
 def print_tree(node, level=0):
