@@ -21,6 +21,7 @@ if __name__ == "__main__":
         for i in loop:
             # for j in loop:
             psum += array[i]
+            
             # psum += i + 1
 
             # array[i+1]
@@ -38,6 +39,9 @@ if __name__ == "__main__":
             # print("pssum")
             # (array[i] - loop.variables[0]).print()
             pssum += (array[i] - psum) ** 2
+            
+
+
 
         pssum /= len(array)
 

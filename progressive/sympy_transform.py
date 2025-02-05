@@ -1,7 +1,8 @@
 # sympy_transform.py
 
 import sympy
-from sympy import sympify, expand
+from sympy import sympify, simplify, Symbol, expand
+
 
 # expression.py 안에 있는 클래스들 import
 from .expression import (
@@ -71,7 +72,7 @@ def node_to_string(node):
         exp_str = node_to_string(node.exponent)
         return f"({base_str} ** {exp_str})"
 
-    # 6) Constantized
+    # 6) Constantized -> 잘못됨... 이미 constantized 된 것도 그냥 새로 constantize 해버림
     if isinstance(node, Constantized):
         # TODO: handle Constantized node 
         label = f"Constantized_var{node.id}"
@@ -162,4 +163,8 @@ def flatten_with_sympy(root_node):
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
     print(f"expanded expr: {expanded_expr}")
-    return sympy_to_node(expanded_expr)
+    new_root_node = sympy_to_node(expanded_expr)
+    new_root_node.print()
+    return new_root_node
+
+

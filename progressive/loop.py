@@ -5,6 +5,7 @@ from .token import SpecialToken
 from .variable import Variable
 from .expression import Constantized, Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
 from .flatten_utils import flatten_add_sub
+from .bq_converter import convert_with_bq
 from .sympy_transform import flatten_with_sympy
 
 class Loop:
@@ -23,6 +24,7 @@ class Loop:
         
     def add_variable(self, value):
         v = Variable(self, value)
+        v._tracked = True
         self.variables.append(v)
         return v
 
@@ -62,7 +64,13 @@ class Loop:
        
                 
         # compile
+        for var in self.variables:
+            var.expr = convert_with_bq(var.expr, len(self.array))
         
+        print("=== After BQ Conversion ===")
+        for i, v in enumerate(self.variables, start=1):
+            print(f"Variable {i}:")
+            v.expr.print()
         
         # run with time estimators
         
@@ -81,8 +89,8 @@ class Loop:
             return self.symbol         
 
         # run after each loop
-        
-        # constantize all variables if they are not
+        # constantize all variables if they are not -> 등록된 모든 노드를 constantize 하면 안되고,
+        # 해당 루프에서 사용된 노드만 constantize 해야 함.
         for var in self.variables:
             if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node):
                 var.expr = Constantized(var.expr)
