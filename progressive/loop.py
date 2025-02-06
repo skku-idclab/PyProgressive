@@ -31,13 +31,14 @@ class Loop:
     def __exit__(self, *args):
         # run after the entire block 
         
-        self.variables[0].print()
-        self.variables[1].print()
+        #self.variables[0].print()
+        #self.variables[1].print()
         # TODO: topological sort
         # TODO: check for cycles
         # TODO: flatten additions and subtractions        
         # TODO: flatten multiplications
         # TODO: check if each expr can be projected by BQs
+
 
 
         #1) topological sort
@@ -60,7 +61,8 @@ class Loop:
 
         print("=== After Flatten with Sympy ===")
         for i, v in enumerate(self.variables, start=1):
-            print(f"Variable {i}: {v.expr}")
+            print(f"Variable {i}:")
+            v.expr.print()
        
                 
         # compile

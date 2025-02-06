@@ -76,7 +76,7 @@ def node_to_string(node):
     if isinstance(node, Constantized):
         # TODO: handle Constantized node 
         label = f"Constantized_var{node.id}"
-        constantized_map[label] = node.expr
+        constantized_map[label] = node
         expr_str = node_to_string(node.expr)
         return label
         #return f"{expr_str}" # 일단은 expr만 반환
@@ -101,10 +101,9 @@ def sympy_to_node(expr):
             if inner_expr is None:
                 raise ValueError(f"Constantized node '{name}' has no inner expression")
             else:
-                return Constantized(inner_expr) # Error!!!!
+                return inner_expr
         if name.startswith("arr_"):
             if name in token_map:
-                print("token_map[name]: ", token_map[name].data)
                 return DataItemToken(token_map[name])
             return DataItemToken()
         # 그외는 임시로 Variable(None, 0) 등으로 처리. 추후 수정 필요
@@ -164,7 +163,8 @@ def flatten_with_sympy(root_node):
     expanded_expr = expand(sym_expr)
     print(f"expanded expr: {expanded_expr}")
     new_root_node = sympy_to_node(expanded_expr)
-    new_root_node.print()
+    #print("=== After Flatten with Sympy ===")
+    #new_root_node.print()
     return new_root_node
 
 
