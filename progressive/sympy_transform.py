@@ -72,7 +72,7 @@ def node_to_string(node):
         exp_str = node_to_string(node.exponent)
         return f"({base_str} ** {exp_str})"
 
-    # 6) Constantized -> 잘못됨... 이미 constantized 된 것도 그냥 새로 constantize 해버림
+    # 6) Constantized 
     if isinstance(node, Constantized):
         # TODO: handle Constantized node 
         label = f"Constantized_var{node.id}"
@@ -101,7 +101,7 @@ def sympy_to_node(expr):
             if inner_expr is None:
                 raise ValueError(f"Constantized node '{name}' has no inner expression")
             else:
-                return Constantized(inner_expr)
+                return Constantized(inner_expr) # Error!!!!
         if name.startswith("arr_"):
             if name in token_map:
                 print("token_map[name]: ", token_map[name].data)

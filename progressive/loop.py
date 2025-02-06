@@ -85,15 +85,17 @@ class Loop:
     def __next__(self):
         if not self.cursor_in_loop:
             self.cursor_in_loop = True
+            for var in self.variables:
+                if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
+                    print("Constantizing", var)
+                    var.expr = Constantized(var.expr)
             
             return self.symbol         
 
         # run after each loop
         # constantize all variables if they are not -> 등록된 모든 노드를 constantize 하면 안되고,
         # 해당 루프에서 사용된 노드만 constantize 해야 함.
-        for var in self.variables:
-            if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node):
-                var.expr = Constantized(var.expr)
+        
             
             
         

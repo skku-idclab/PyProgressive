@@ -5,9 +5,11 @@ class Variable(Node):
     def __init__(self, loop, expr):
         self.loop = loop
         self.expr = expr
+        self.modified = False
 
     def __iadd__(self, other):
         self.expr = InplaceAddition(self.expr, other, in_loop=self.loop.cursor_in_loop)
+        self.modified = True
         return self
 
     def __isub__(self, other):
