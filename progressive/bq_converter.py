@@ -35,31 +35,13 @@ def convert_with_bq(root_node, array_length):
     """
     # 1. Node → 문자열 → sympy 식
     expr_str = node_to_string(root_node)
+    print("expr_str:", expr_str)
     try:
         sym_expr = sympify(expr_str, locals={"Constantized": ConstantizedFunction})
     except Exception as e:
         raise ValueError(f"sympify 실패: {expr_str}") from e
 
-    # 2. 먼저, 내부에 ConstantizedFunction이 있으면 재귀적으로 처리한다.
-    def replace_constantized_func(expr):
-        # expr가 ConstantizedFunction인 경우
-        if expr.func == ConstantizedFunction:
-            # expr.args = (var_name, inner_expr)
-            var_name = expr.args[0]
-            inner_expr = expr.args[1]
-            # 재귀 변환: inner_expr가 이미 sympy 식이므로, 
-            # 이 식을 우리가 변환하는 방식(다항식 치환)으로 처리한다.
-            converted_inner = convert_with_bq_from_sympy(inner_expr, array_length)
-            # 내부 변환 결과에 array_length를 곱해준다.
-            return converted_inner * array_length
-        return expr
 
-    sym_expr = sym_expr.replace(lambda expr: expr.func == ConstantizedFunction, replace_constantized_func)
-
-    
-    # 3. 전개: sympy의 expand 함수를 이용하여 다항식으로 전개한다.
-    sym_expr = expand(sym_expr)
-    
     # 4. DataItemToken 치환: flatten 단계에서 "arr_i"로 표현된 항목을 다항식으로 보고 치환한다.
     arr_i = Symbol("arr_i")
     sym_expr = sym_expr.replace(
@@ -79,8 +61,10 @@ def convert_with_bq(root_node, array_length):
             # 각 단항 a_k * arr_i^k를 a_k * BQ_k로 대체
             new_expr += coeff * Symbol("BQ_" + str(k))
         converted_sym_expr = simplify(new_expr)
+
+    print("convert Result:", converted_sym_expr)
     
-    # 6. 최종 sympy 식을 our Node 구조로 복원하여 반환한다.
+    # 6. 최종 sympy 식을 our Node 구조로 복원하여 반환한다. -> 이 부분이 문제다. BQ를 제대로 노드로 변환을 못함.
     converted_node = sympy_to_node(converted_sym_expr)
     return converted_node
 

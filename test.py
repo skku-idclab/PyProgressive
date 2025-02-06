@@ -41,8 +41,6 @@ if __name__ == "__main__":
             pssum += (array[i] - psum) ** 2
             
 
-
-
         pssum /= len(array)
 
 

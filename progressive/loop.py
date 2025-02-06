@@ -89,7 +89,7 @@ class Loop:
             self.cursor_in_loop = True
             for var in self.variables:
                 if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
-                    print("Constantizing", var)
+                    # print("Constantizing", var)
                     var.expr = Constantized(var.expr)
             
             return self.symbol         

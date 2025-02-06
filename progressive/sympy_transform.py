@@ -9,7 +9,7 @@ from .expression import (
     Constantized, Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
-    InplaceMultiplication, InplaceDivision
+    InplaceMultiplication, InplaceDivision, BQ
 )
 # Variable, DataItemToken 등도 import
 from .variable import Variable
@@ -106,6 +106,11 @@ def sympy_to_node(expr):
             if name in token_map:
                 return DataItemToken(token_map[name])
             return DataItemToken()
+        
+        if name.startswith("BQ_"):
+            bqnum = name.split("_")[1]
+            return BQ(bqnum)
+
         # 그외는 임시로 Variable(None, 0) 등으로 처리. 추후 수정 필요
         return Variable(None, 0)
 

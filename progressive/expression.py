@@ -103,6 +103,14 @@ class Constantized(Node):
         print(f"Constantized_var{self.id} = {expr}")
     def __str__(self):
         return f"Constantized_var{self.id}"
+    
+
+class BQ(Node):
+    def __init__(self, k):
+        self.k = k
+
+    def __str__(self):
+        return f"BQ_{self.k}"
 
 
 def print_tree(node, level=0):
@@ -131,5 +139,7 @@ def print_tree(node, level=0):
         print_tree(node.exponent, level + 1)
     elif isinstance(node, Constantized):
         print_tree(node.expr, level + 1)
+    elif isinstance(node, BQ):
+        pass
     elif isinstance(node, Node):
         node.print(level + 1)
