@@ -77,12 +77,17 @@ class Loop:
 
 
         # 2) find max BQ
+        max_bq = 0
+
+        for var in self.variables:
+            max_bq = max(var.expr.bq_max, max_bq)
         
+        #print("Max BQ:", max_bq)
 
 
         # run with time estimators
 
-        # 1) compute BQs
+        # TODO: 1) compute BQs
 
 
 

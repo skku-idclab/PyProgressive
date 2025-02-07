@@ -77,10 +77,7 @@ def convert_with_bq(root_node, array_length):
     lambda expr: Symbol("BQ_1")
     )
 
-    bq_symbols = [s for s in sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
-    if len(bq_symbols) != 0:
-        bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
-        print("bq_max_x:", bq_max_x)
+    
     #print("DataItemToken replace Result:", sym_expr)
     
     converted_sym_expr = simplify(sym_expr)
@@ -89,6 +86,12 @@ def convert_with_bq(root_node, array_length):
     
     # 5. 최종 sympy 식을 our Node 구조로 복원하여 반환한다.
     converted_node = sympy_to_node(converted_sym_expr)
+
+    bq_symbols = [s for s in sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
+    if len(bq_symbols) != 0:
+        bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
+        print("bq_max_x:", bq_max_x)
+        converted_node.bq_max = bq_max_x
 
 
     return converted_node
