@@ -10,6 +10,7 @@ if __name__ == "__main__":
         psum = loop.add_variable(0)
         pssum = loop.add_variable(0)
 
+
         @loop.on("tick")
         def tick_handler():
             print(psum.value(), pssum.value())

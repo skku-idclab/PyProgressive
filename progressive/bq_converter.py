@@ -3,6 +3,7 @@
 import sympy
 from sympy import sympify, simplify, Symbol, expand, Poly, Function
 from .sympy_transform import node_to_string, sympy_to_node
+from .expression import Constantized
 
 # 사용자정의 sympy 함수: constantized 노드를 표현하기 위한 함수
 class ConstantizedFunction(Function):
@@ -33,6 +34,10 @@ def convert_with_bq(root_node, array_length):
     Returns:
         Node: 변환된, BQ 전개가 적용된 표현식 트리.
     """
+
+    if isinstance(root_node, Constantized):
+        print("root_node is Constantized")
+        root_node = root_node.expr
     # 1. Node → 문자열 → sympy 식
     expr_str = node_to_string(root_node)
     print("expr_str:", expr_str)
@@ -72,6 +77,10 @@ def convert_with_bq(root_node, array_length):
     lambda expr: Symbol("BQ_1")
     )
 
+    bq_symbols = [s for s in sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
+    if len(bq_symbols) != 0:
+        bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
+        print("bq_max_x:", bq_max_x)
     #print("DataItemToken replace Result:", sym_expr)
     
     converted_sym_expr = simplify(sym_expr)
@@ -80,6 +89,8 @@ def convert_with_bq(root_node, array_length):
     
     # 5. 최종 sympy 식을 our Node 구조로 복원하여 반환한다.
     converted_node = sympy_to_node(converted_sym_expr)
+
+
     return converted_node
 
 def convert_with_bq_from_sympy(sym_expr, array_length):

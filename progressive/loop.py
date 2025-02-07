@@ -59,13 +59,14 @@ class Loop:
         for var in self.variables:
             var.expr = flatten_with_sympy(var.expr)
 
-        print("=== After Flatten with Sympy ===")
-        for i, v in enumerate(self.variables, start=1):
-            print(f"Variable {i}:")
-            v.expr.print()
+        # print("=== After Flatten with Sympy ===")
+        # for i, v in enumerate(self.variables, start=1):
+        #     print(f"Variable {i}:")
+        #     v.expr.print()
        
                 
         # compile
+        # 1) convert to BQ
         for var in self.variables:
             var.expr = convert_with_bq(var.expr, len(self.array))
         
@@ -73,8 +74,20 @@ class Loop:
         for i, v in enumerate(self.variables, start=1):
             print(f"Variable {i}:")
             v.expr.print()
+
+
+        # 2) find max BQ
         
+
+
         # run with time estimators
+
+        # 1) compute BQs
+
+
+
+
+
         
         #print(args)
         pass
@@ -82,15 +95,16 @@ class Loop:
     def __iter__(self):        
         if self.cursor_in_loop: 
             raise "Nested loops are not supported!"
-        return self
+        return self 
 
     def __next__(self):
         if not self.cursor_in_loop:
             self.cursor_in_loop = True
             for var in self.variables:
                 if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
-                    # print("Constantizing", var)
+                    #print("Constantizing", var)
                     var.expr = Constantized(var.expr)
+            
             
             return self.symbol         
 
@@ -102,38 +116,10 @@ class Loop:
             
         
         self.cursor_in_loop = False        
+
+        
         raise StopIteration  # Stop iteration after yielding once
 
-    # def __iter__(self):
-    #     self.emit("start")
-
-    #     self.iter = None
-    #     self.array.init_iter()
-    #     self.estimator = SimpleLinearEstimator()
-
-    #     return self
-    
-    # def __next__(self):
-    #     if self.iter:
-    #         self.array.update_iter(self.iter)
-    #         self.estimator.end()
-            
-    #         self.emit("tick")
-
-    #         self.iter = None
-
-    #     if self.array.iter_done():
-    #         self.emit("end")
-    #         raise StopIteration
-        
-    #     iter_from = self.array.iter
-    #     iter_to = self.array.iter + self.estimator.estimate_next(self.tick)
-    #     iter_to = min(iter_to, self.array.length)
-
-    #     self.iter = iter_to
-    #     self.estimator.start()
-
-    #     return Tick(self.array, iter_from, iter_to)
 
     def on(self, event):        
         def decorator(handler):                        

@@ -14,6 +14,7 @@ class Variable(Node):
 
     def __isub__(self, other):
         self.expr = InplaceSubtraction(self.expr, other, in_loop=self.loop.cursor_in_loop)
+        self.modified = True
         return self
 
     def __imul__(self, other):
