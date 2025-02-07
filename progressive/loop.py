@@ -86,8 +86,23 @@ class Loop:
 
 
         # run with time estimators
+        print("self data:", self.array.data)
 
-        # TODO: 1) compute BQs
+        # TODO: 1) compute BQs iteratively
+        BQ_list = [0] * (max_bq)
+        es_BQ = [0] * (max_bq)
+        for idx in range(0, len(self.array.data)):
+            for i in range(0, max_bq):
+                BQ_list[i] = (BQ_list[i] * (idx) + self.array.data[idx] ** (i+1)) / (idx+1)
+                es_BQ[i] = BQ_list[i] * len(self.array.data)
+            print("es_BQ list:", es_BQ)
+                
+
+
+
+
+        # TODO: 2) time estimation
+        # TODO: 3) evaluate each variable
 
 
 
