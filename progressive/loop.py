@@ -7,6 +7,7 @@ from .expression import Constantized, Node, Addition, Subtraction, Multiplicatio
 from .flatten_utils import flatten_add_sub
 from .bq_converter import convert_with_bq
 from .sympy_transform import flatten_with_sympy
+from .evaluator import evaluate
 
 class Loop:
     def __init__(self, session, array, interval=1):
@@ -82,13 +83,11 @@ class Loop:
         for var in self.variables:
             max_bq = max(var.expr.bq_max, max_bq)
         
-        #print("Max BQ:", max_bq)
 
 
         # run with time estimators
-        print("self data:", self.array.data)
 
-        # TODO: 1) compute BQs iteratively
+        # TODO: 1) compute BQs iteratively (complete)
         BQ_list = [0] * (max_bq)
         es_BQ = [0] * (max_bq)
         for idx in range(0, len(self.array.data)):
@@ -96,13 +95,26 @@ class Loop:
                 BQ_list[i] = (BQ_list[i] * (idx) + self.array.data[idx] ** (i+1)) / (idx+1)
                 es_BQ[i] = BQ_list[i] * len(self.array.data)
             print("es_BQ list:", es_BQ)
+
+            for var in self.variables:
+                result = evaluate(var, es_BQ)
+                print("result:", result)
+
+
+            # TODO: 2) (constantized)Variables topological sort
+
+            # TODO: 3) evaluate each variable
+
+
+            
+            # TODO: 4) time estimation
+            
                 
 
 
 
 
-        # TODO: 2) time estimation
-        # TODO: 3) evaluate each variable
+       
 
 
 
@@ -152,7 +164,7 @@ class Loop:
         for event_name, handler in self.handlers:
             if event_name == event:
                 handler(*args)
-
+    
 
     def _get_children(self, node):
         """

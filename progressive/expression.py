@@ -100,7 +100,6 @@ class Constantized(Node):
         self.expr = expr
         self.id = Constantized._counter
         Constantized._counter += 1
-        print(f"Constantized_var{self.id} = {expr}")
     def __str__(self):
         return f"Constantized_var{self.id}"
     

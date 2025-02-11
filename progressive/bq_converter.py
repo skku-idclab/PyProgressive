@@ -2,8 +2,15 @@
 
 import sympy
 from sympy import sympify, simplify, Symbol, expand, Poly, Function
-from .sympy_transform import node_to_string, sympy_to_node
-from .expression import Constantized
+from .sympy_transform import node_to_string, token_map
+from .expression import (
+    Constantized, Node, BinaryOperationNode, Addition, Subtraction,
+    Multiplication, Division, PowerN,
+    InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
+    InplaceMultiplication, InplaceDivision, BQ
+)
+from .variable import Variable
+from .token import DataItemToken
 
 # 사용자정의 sympy 함수: constantized 노드를 표현하기 위한 함수
 class ConstantizedFunction(Function):
@@ -11,6 +18,9 @@ class ConstantizedFunction(Function):
     def eval(cls, var_name, inner_expr):
         # eval 단계에서는 바로 평가하지 않고, 보존하도록 한다.
         return None
+
+constantized_map = {}
+
 
 def convert_with_bq(root_node, array_length):
     """
@@ -35,9 +45,14 @@ def convert_with_bq(root_node, array_length):
         Node: 변환된, BQ 전개가 적용된 표현식 트리.
     """
 
+    constantized_flag = False
+
+
     if isinstance(root_node, Constantized):
         print("root_node is Constantized")
+        tem = root_node
         root_node = root_node.expr
+        constantized_flag = True
     # 1. Node → 문자열 → sympy 식
     expr_str = node_to_string(root_node)
     print("expr_str:", expr_str)
@@ -45,6 +60,8 @@ def convert_with_bq(root_node, array_length):
         sym_expr = sympify(expr_str, locals={"Constantized": ConstantizedFunction})
     except Exception as e:
         raise ValueError(f"sympify 실패: {expr_str}") from e
+    
+
     
 
     # 2. 먼저, 내부에 ConstantizedFunction이 있으면 재귀적으로 처리한다.
@@ -85,16 +102,19 @@ def convert_with_bq(root_node, array_length):
     print("convert Result:", converted_sym_expr)
     
     # 5. 최종 sympy 식을 our Node 구조로 복원하여 반환한다.
-    converted_node = sympy_to_node(converted_sym_expr)
+    converted_node = sympy_to_BQ_node(converted_sym_expr)
 
     bq_symbols = [s for s in sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
     if len(bq_symbols) != 0:
         bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
-        print("bq_max_x:", bq_max_x)
         converted_node.bq_max = bq_max_x
 
+    if constantized_flag:
+        label = f"Constantized_var{tem.id}"
+        constantized_map[label] = converted_node
 
     return converted_node
+
 
 def convert_with_bq_from_sympy(sym_expr, array_length):
     """
@@ -112,3 +132,72 @@ def convert_with_bq_from_sympy(sym_expr, array_length):
             k = monom[0]
             new_expr += coeff * Symbol("BQ_" + str(k))
         return simplify(new_expr)
+
+
+
+def sympy_to_BQ_node(expr):
+    """
+    Convert Sympy expression back to our Node structure.
+    Inplace 노드는 일반 Add/Sub와 동일하게 복원할 수 있음
+    (in-place 개념을 다시 살려야 함)
+    """
+    if isinstance(expr, sympy.Symbol):
+        name = str(expr)
+        if name.startswith("Constantized_var"):
+            inner_expr = constantized_map[name]
+            if inner_expr is None:
+                raise ValueError(f"Constantized node '{name}' has no inner expression")
+            else:
+                return inner_expr
+        if name.startswith("arr_"):
+            if name in token_map:
+                return DataItemToken(token_map[name])
+            return DataItemToken()
+        
+        if name.startswith("BQ_"):
+            bqnum = name.split("_")[1]
+            return BQ(bqnum)
+
+        # 그외는 임시로 Variable(None, 0) 등으로 처리. 추후 수정 필요
+        return Variable(None, 0)
+
+    if isinstance(expr, sympy.Integer):
+        return int(expr)
+    if isinstance(expr, sympy.Float):
+        return float(expr)
+
+    if isinstance(expr, sympy.Add):
+        args = expr.args
+        if len(args) == 1:
+            return sympy_to_BQ_node(args[0])
+        current = sympy_to_BQ_node(args[0])
+        for subexpr in args[1:]:
+            current = Addition(current, sympy_to_BQ_node(subexpr))
+        return current
+
+    if isinstance(expr, sympy.Mul):
+        args = expr.args
+        if len(args) == 1:
+            return sympy_to_BQ_node(args[0])
+        current = sympy_to_BQ_node(args[0])
+        for subexpr in args[1:]:
+            current = Multiplication(current, sympy_to_BQ_node(subexpr))
+        return current
+
+    if isinstance(expr, sympy.Pow):
+        base, exponent = expr.args
+        base_node = sympy_to_BQ_node(base)
+        exp_node = sympy_to_BQ_node(exponent)
+        return PowerN(base_node, exp_node)
+
+    # Division, Subtraction을 Add/Mul로 표현하는 Sympy 내부 구조에 따라,
+    # (a-b) => Add(a, -b), (a/b) => Mul(a, b^-1)
+
+    if isinstance(expr, sympy.Rational):
+        return Division(sympy_to_BQ_node(expr.p), sympy_to_BQ_node(expr.q))
+    
+    if isinstance(expr, int):
+        return expr
+
+    raise TypeError(f"Unsupported sympy expr type: {type(expr)} => {expr}")
+
