@@ -4,7 +4,6 @@
 from .token import SpecialToken
 from .variable import Variable
 from .expression import Constantized, Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
-from .flatten_utils import flatten_add_sub
 from .bq_converter import convert_with_bq
 from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
@@ -42,21 +41,7 @@ class Loop:
 
 
 
-        #1) topological sort
-        root_nodes = [var.expr for var in self.variables]
-
-        #print("Root nodes:")
-        # for node in root_nodes:
-        #     print(node)
-
-        # Sort the nodes in topological order
-        sorted_nodes = self._topological_sort(root_nodes)
-
-        # print("Sorted nodes:")
-        # for node in sorted_nodes:
-        #     print(node)
-
-        #2) flatten each variable by using Sympy
+        # flatten each variable by using Sympy
         for var in self.variables:
             var.expr = flatten_with_sympy(var.expr)
 
@@ -95,31 +80,18 @@ class Loop:
                 BQ_list[i] = (BQ_list[i] * (idx) + self.array.data[idx] ** (i+1)) / (idx+1)
             print("BQ list:", BQ_list)
 
+            # 2) evaluate each variable
+
             for var in self.variables:
                 result = evaluate(var, BQ_list)
                 print("result:", result)
 
 
-            # TODO: 2) (constantized)Variables topological sort
-
-            # TODO: 3) evaluate each variable
-
-
             
-            # TODO: 4) time estimation
+            # TODO: 3) time estimation
             
                 
-
-
-
-
-       
-
-
-
-
-
-        
+  
         #print(args)
         pass
     
@@ -144,7 +116,6 @@ class Loop:
         # 해당 루프에서 사용된 노드만 constantize 해야 함.
         for var in self.variables:
                 if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
-                    #print("Constantizing", var)
                     var.expr = Multiplication(var.expr, len(self.array.data))
             
             
@@ -192,58 +163,3 @@ class Loop:
             # For constants, tokens, or other terminal objects, no children.
             return []
 
-
-    def _topological_sort(self, root_nodes):
-        """
-        Performs DFS-based topological sorting (with cycle detection) on
-        the expression graph formed by the root nodes.
-
-        Args:
-            root_nodes (list[Node]): A list of expression roots (e.g., psum.expr, pssum.expr).
-
-        Returns:
-            list[Node]: A list of nodes in topologically sorted order.
-
-        Raises:
-            RuntimeError: If a cycle is detected in the expression graph.
-        """
-        visited = set()
-        in_stack = set()  # Tracks nodes in the current DFS recursion path
-        sorted_list = []
-        self.has_cycle = False
-
-        def dfs(node):
-            if node in in_stack:
-                # Cycle found if the node is already in the current recursion stack
-                self.has_cycle = True
-                return
-            if node in visited:
-                # Skip nodes that have already been fully processed
-                return
-
-            in_stack.add(node)
-            
-
-            # Visit child nodes (if they are Node instances)
-            for child in self._get_children(node):
-                if isinstance(child, Node):
-                    dfs(child)
-
-            in_stack.remove(node)
-            visited.add(node)
-
-            sorted_list.append(node)
-
-        # Start DFS from each root node
-        for root in root_nodes:
-            if root is not None and root not in visited:
-                dfs(root)
-
-        # If a cycle was detected, raise an error.
-        if self.has_cycle:
-            raise RuntimeError("Cycle detected in expression graph!")
-
-        # Reverse the list to get the proper topological order
-        #sorted_list.reverse()
-        return sorted_list
-    
