@@ -65,6 +65,8 @@ class Loop:
         # 2) find max BQ
         max_bq = 0
 
+
+
         for var in self.variables:
             max_bq = max(var.expr.bq_max, max_bq)
         

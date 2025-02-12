@@ -108,6 +108,8 @@ def convert_with_bq(root_node, array_length):
     if len(bq_symbols) != 0:
         bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
         converted_node.bq_max = bq_max_x
+    else:
+        converted_node.bq_max = 0
 
     if constantized_flag:
         label = f"Constantized_var{tem.id}"

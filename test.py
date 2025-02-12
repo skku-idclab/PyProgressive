@@ -9,7 +9,7 @@ if __name__ == "__main__":
     with ps.loop(array, interval=1) as loop:
         psum = loop.add_variable(0)
         pssum = loop.add_variable(0)
-        # trash = loop.add_variable(0)
+        trash = loop.add_variable(0)
 
 
         @loop.on("tick")
@@ -45,8 +45,8 @@ if __name__ == "__main__":
         pssum /= len(array)
 
 
-        # for i in loop:
-        #     trash += (psum - pssum) **2 
+        for i in loop:
+            trash += (psum - pssum) **2
 
 
 

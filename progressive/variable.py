@@ -6,7 +6,6 @@ class Variable(Node):
         self.loop = loop
         self.expr = expr
         self.modified = False
-        self.bq_max = 0
 
     def __iadd__(self, other):
         self.expr = InplaceAddition(self.expr, other, in_loop=self.loop.cursor_in_loop)
