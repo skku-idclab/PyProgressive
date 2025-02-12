@@ -80,6 +80,10 @@ def node_to_string(node):
         expr_str = node_to_string(node.expr)
         return label
         #return f"{expr_str}" # 일단은 expr만 반환
+
+    # 7) BQ
+    if isinstance(node, BQ):
+        return f"BQ_{node.k}"
     
     # 혹은 Node.__init__(expr)를 활용하는 경우,
     # node.expr를 문자열 변환해서 반환가능

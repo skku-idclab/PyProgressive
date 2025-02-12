@@ -93,11 +93,10 @@ class Loop:
         for idx in range(0, len(self.array.data)):
             for i in range(0, max_bq):
                 BQ_list[i] = (BQ_list[i] * (idx) + self.array.data[idx] ** (i+1)) / (idx+1)
-                es_BQ[i] = BQ_list[i] * len(self.array.data)
-            print("es_BQ list:", es_BQ)
+            print("BQ list:", BQ_list)
 
             for var in self.variables:
-                result = evaluate(var, es_BQ)
+                result = evaluate(var, BQ_list)
                 print("result:", result)
 
 
@@ -143,7 +142,10 @@ class Loop:
         # run after each loop
         # constantize all variables if they are not -> 등록된 모든 노드를 constantize 하면 안되고,
         # 해당 루프에서 사용된 노드만 constantize 해야 함.
-        
+        for var in self.variables:
+                if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
+                    #print("Constantizing", var)
+                    var.expr = Multiplication(var.expr, len(self.array.data))
             
             
         

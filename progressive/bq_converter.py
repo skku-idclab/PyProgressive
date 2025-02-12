@@ -130,7 +130,7 @@ def convert_with_bq_from_sympy(sym_expr, array_length):
         new_expr = 0
         for monom, coeff in poly.as_dict().items():
             k = monom[0]
-            new_expr += coeff * Symbol("BQ_" + str(k))
+            new_expr += coeff * Symbol("BQ_" + str(k)) 
         return simplify(new_expr)
 
 
