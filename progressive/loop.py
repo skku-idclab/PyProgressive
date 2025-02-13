@@ -59,7 +59,7 @@ class Loop:
         print("=== After BQ Conversion ===")
         for i, v in enumerate(self.variables, start=1):
             print(f"Variable {i}:")
-            v.expr.print()
+            v.print()
 
 
         # 2) find max BQ
@@ -68,7 +68,8 @@ class Loop:
 
 
         for var in self.variables:
-            max_bq = max(var.expr.bq_max, max_bq)
+            if hasattr(var.expr, "bq_max"):
+                max_bq = max(var.expr.bq_max, max_bq)
         
 
 
