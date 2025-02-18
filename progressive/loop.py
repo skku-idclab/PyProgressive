@@ -31,15 +31,6 @@ class Loop:
 
     def __exit__(self, *args):
         # run after the entire block 
-        
-        #self.variables[0].print()
-        #self.variables[1].print()
-        # TODO: topological sort
-        # TODO: check for cycles
-        # TODO: flatten additions and subtractions        
-        # TODO: flatten multiplications
-        # TODO: check if each expr can be projected by BQs
-
 
 
         # flatten each variable by using Sympy
@@ -78,7 +69,6 @@ class Loop:
 
         # TODO: 1) compute BQs iteratively (complete)
         BQ_list = [0] * (max_bq)
-        es_BQ = [0] * (max_bq)
         iter_accum_duration = 0
         for idx in range(0, len(self.array.data)):
             iter_start = time.perf_counter()
@@ -139,8 +129,7 @@ class Loop:
             return self.symbol         
 
         # run after each loop
-        # constantize all variables if they are not -> 등록된 모든 노드를 constantize 하면 안되고,
-        # 해당 루프에서 사용된 노드만 constantize 해야 함.
+        # constantize all variables if they are not 
         for var in self.variables:
                 if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
                     var.expr = Multiplication(var.expr, len(self.array.data))

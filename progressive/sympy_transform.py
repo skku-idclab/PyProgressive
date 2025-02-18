@@ -23,7 +23,7 @@ def node_to_string(node):
     Convert our Node (including Inplace nodes) into a string
     that sympy can parse.
     """
-    # 1) 기본 타입(int, float)
+    # 1) base type(int, float)
     if isinstance(node, int):
         return str(node)
     if isinstance(node, float):
@@ -34,9 +34,9 @@ def node_to_string(node):
         #symbol_name = f"arr_{id(node.array)}"
         symbol_name = "arr_i"
         token_map[symbol_name] = node.array
-        return symbol_name  # 예: array[i] -> arr_1244313 (단순 가정)
+        return symbol_name  # ex: array[i] -> arr_123
     if isinstance(node, Variable):
-        # Variable 내부의 expr를 문자열로 변환
+        # Convert expr (in Variable) to string
         return f"({node_to_string(node.expr)})"
 
     # 3) BinaryOperationNode (Addition, Subtraction, ...)
@@ -56,7 +56,7 @@ def node_to_string(node):
     if isinstance(node, InplaceOperationNode):
         left_str = node_to_string(node.left)
         right_str = node_to_string(node.right)
-        # Sympy에는 in-place 개념이 없으므로 일반 연산처럼 처리
+        # No in-place scheme in Sympy, simply convert to normal operation
         if isinstance(node, InplaceAddition):
             return f"({left_str} + {right_str})"
         elif isinstance(node, InplaceSubtraction):
@@ -79,15 +79,13 @@ def node_to_string(node):
         constantized_map[label] = node
         expr_str = node_to_string(node.expr)
         return label
-        #return f"{expr_str}" # 일단은 expr만 반환
+
 
     # 7) BQ
     if isinstance(node, BQ):
         return f"BQ_{node.k}"
     
-    # 혹은 Node.__init__(expr)를 활용하는 경우,
-    # node.expr를 문자열 변환해서 반환가능
-    # 하지만 BinaryOperationNode 등은 이미 left/right를 쓰므로 생략.
+
 
     raise TypeError(f"Unsupported node type in node_to_string: {type(node)}")
 
@@ -95,8 +93,7 @@ def node_to_string(node):
 def sympy_to_node(expr):
     """
     Convert Sympy expression back to our Node structure.
-    Inplace 노드는 일반 Add/Sub와 동일하게 복원할 수 있음
-    (in-place 개념을 다시 살려야 함)
+    Inplace can be modified to simple Add/Sub again.
     """
     if isinstance(expr, sympy.Symbol):
         name = str(expr)
@@ -115,7 +112,7 @@ def sympy_to_node(expr):
             bqnum = name.split("_")[1]
             return BQ(bqnum)
 
-        # 그외는 임시로 Variable(None, 0) 등으로 처리. 추후 수정 필요
+        # others considered as Variable(None, 0). will be modified later
         return Variable(None, 0)
 
     if isinstance(expr, sympy.Integer):
@@ -147,7 +144,7 @@ def sympy_to_node(expr):
         exp_node = sympy_to_node(exponent)
         return PowerN(base_node, exp_node)
 
-    # Division, Subtraction을 Add/Mul로 표현하는 Sympy 내부 구조에 따라,
+    # Division, Subtraction -> Addition, Multiplation in Sympy, 
     # (a-b) => Add(a, -b), (a/b) => Mul(a, b^-1)
 
     if isinstance(expr, sympy.Rational):
@@ -161,8 +158,8 @@ def sympy_to_node(expr):
 
 def flatten_with_sympy(root_node):
     """
-    1) Node -> 문자열
-    2) 문자열 -> sympy.sympify
+    1) Node -> string
+    2) string -> sympy.sympify
     3) sympy.expand
     4) sympy -> Node
     """
