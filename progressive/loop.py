@@ -7,6 +7,7 @@ from .expression import Constantized, Node, Addition, Subtraction, Multiplicatio
 from .bq_converter import convert_with_bq
 from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
+import time
 
 class Loop:
     def __init__(self, session, array, interval=1):
@@ -78,16 +79,34 @@ class Loop:
         # TODO: 1) compute BQs iteratively (complete)
         BQ_list = [0] * (max_bq)
         es_BQ = [0] * (max_bq)
+        iter_accum_duration = 0
         for idx in range(0, len(self.array.data)):
+            iter_start = time.perf_counter()
+
             for i in range(0, max_bq):
                 BQ_list[i] = (BQ_list[i] * (idx) + self.array.data[idx] ** (i+1)) / (idx+1)
-            print("BQ list:", BQ_list)
+            #print("BQ list:", BQ_list)
 
             # 2) evaluate each variable
 
             for var in self.variables:
                 result = evaluate(var, BQ_list)
-                print("result:", result)
+                var.val = result
+                #print("result:", result)
+                time.sleep(0.1)
+
+
+            iter_end = time.perf_counter()
+
+            iter_accum_duration += iter_end - iter_start
+            
+            if iter_accum_duration > self.interval:
+                self.emit("tick")
+                iter_accum_duration -= self.interval
+            
+
+
+
 
 
             

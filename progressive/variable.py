@@ -6,6 +6,7 @@ class Variable(Node):
         self.loop = loop
         self.expr = expr
         self.modified = False
+        self.val = None
 
     def __iadd__(self, other):
         self.expr = InplaceAddition(self.expr, other, in_loop=self.loop.cursor_in_loop)
@@ -27,6 +28,9 @@ class Variable(Node):
 
     def print(self, level=0):
         print_tree(self.expr, level)
+
+    def value(self):
+        return self.val
 
     def __str__(self):
         return f"Variable"

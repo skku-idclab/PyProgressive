@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
 
         for i in loop:
-            trash += (psum - pssum) **2
+            trash += (psum - pssum) **3
 
 
 
