@@ -57,10 +57,10 @@ class Loop:
         for var in self.variables:
             var.expr = convert_with_bq(var.expr, len(self.array))
         
-        print("=== After BQ Conversion ===")
-        for i, v in enumerate(self.variables, start=1):
-            print(f"Variable {i}:")
-            v.print()
+        # print("=== After BQ Conversion ===")
+        # for i, v in enumerate(self.variables, start=1):
+        #     print(f"Variable {i}:")
+        #     v.print()
 
 
         # 2) find max BQ
@@ -93,9 +93,10 @@ class Loop:
                 result = evaluate(var, BQ_list)
                 var.val = result
                 #print("result:", result)
-                time.sleep(0.1)
+                time.sleep(0.2)
 
 
+            # 3) time estimation
             iter_end = time.perf_counter()
 
             iter_accum_duration += iter_end - iter_start
@@ -103,6 +104,10 @@ class Loop:
             if iter_accum_duration > self.interval:
                 self.emit("tick")
                 iter_accum_duration -= self.interval
+
+
+        
+        self.emit("end")
             
 
 
@@ -110,7 +115,7 @@ class Loop:
 
 
             
-            # TODO: 3) time estimation
+
             
                 
   

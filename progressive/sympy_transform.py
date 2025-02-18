@@ -167,10 +167,10 @@ def flatten_with_sympy(root_node):
     4) sympy -> Node
     """
     expr_str = node_to_string(root_node)
-    print(f"node to string result: {expr_str}")
+    # print(f"node to string result: {expr_str}")
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
-    print(f"expanded expr: {expanded_expr}")
+    # print(f"expanded expr: {expanded_expr}")
     new_root_node = sympy_to_node(expanded_expr)
     #print("=== After Flatten with Sympy ===")
     #new_root_node.print()

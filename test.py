@@ -6,12 +6,13 @@ if __name__ == "__main__":
     ps = pp.Session()
     array = pp.Array([10, 20, 0, 21, 5, 42, 11, 14, 34, 13])
 
+
     with ps.loop(array, interval=1) as loop:
         psum = loop.add_variable(0)
+        not_used = loop.add_variable(0)
         pssum = loop.add_variable(0)
         trash = loop.add_variable(0)
-        not_used = loop.add_variable(0)
-
+        
 
         @loop.on("tick")
         def tick_handler():
@@ -26,15 +27,15 @@ if __name__ == "__main__":
             psum += array[i]
             
             # psum += i + 1
-
             # array[i+1]
-
             # psum += iff(array[i] > 5, 10, 0)
-
             # if array[i] > 5:
             #     if array[i] < 10:
             #         psum += 1
-
+        
+        # arr = env.AddArray(array)
+        # i = env.itertaor()
+        # program = InLoop(array, MultipleStatements(Accumulate(psum, arr), Accumulate(psum, 1)))
 
         psum /= len(array)
 

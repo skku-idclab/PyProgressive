@@ -49,13 +49,12 @@ def convert_with_bq(root_node, array_length):
 
 
     if isinstance(root_node, Constantized):
-        print("root_node is Constantized")
         tem = root_node
         root_node = root_node.expr
         constantized_flag = True
     # 1. Node → 문자열 → sympy 식
     expr_str = node_to_string(root_node)
-    print("expr_str:", expr_str)
+    # print("expr_str:", expr_str)
     try:
         sym_expr = sympify(expr_str, locals={"Constantized": ConstantizedFunction})
     except Exception as e:
@@ -99,7 +98,7 @@ def convert_with_bq(root_node, array_length):
     
     converted_sym_expr = simplify(sym_expr)
 
-    print("convert Result:", converted_sym_expr)
+    # print("convert Result:", converted_sym_expr)
     
     # 5. 최종 sympy 식을 our Node 구조로 복원하여 반환한다.
     converted_node = sympy_to_BQ_node(converted_sym_expr)
