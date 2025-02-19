@@ -56,9 +56,6 @@ class Loop:
 
         # 2) find max BQ
         max_bq = 0
-
-
-
         for var in self.variables:
             if hasattr(var.expr, "bq_max"):
                 max_bq = max(var.expr.bq_max, max_bq)
@@ -67,7 +64,7 @@ class Loop:
 
         # run with time estimators
 
-        # TODO: 1) compute BQs iteratively (complete)
+        # 1) compute BQs iteratively
         BQ_list = [0] * (max_bq)
         iter_accum_duration = 0
         for idx in range(0, len(self.array.data)):
@@ -96,19 +93,7 @@ class Loop:
                 iter_accum_duration -= self.interval
 
 
-        
         self.emit("end")
-            
-
-
-
-
-
-            
-
-            
-                
-  
         #print(args)
         pass
     
@@ -134,11 +119,7 @@ class Loop:
                 if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
                     var.expr = Multiplication(var.expr, len(self.array.data))
             
-            
-        
         self.cursor_in_loop = False        
-
-        
         raise StopIteration  # Stop iteration after yielding once
 
 
