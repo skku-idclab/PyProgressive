@@ -5,27 +5,29 @@ if __name__ == "__main__":
 
     ps = pp.Session()
     array = pp.Array([10, 20, 0, 21, 5, 42, 11, 14, 34, 13])
+    array2 = pp.Array([100, -20, 10, 71, 900, 422, 161, 144, 434, 173])
+    array3 = pp.Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 
-    with ps.loop(array, interval=1) as loop:
+    with ps.loop([array, array2, array3], interval=1) as loop:
         psum = loop.add_variable(0)
-        not_used = loop.add_variable(0)
         pssum = loop.add_variable(0)
-        trash = loop.add_variable(0)
+        psssum = loop.add_variable(0)
+
         
 
         @loop.on("tick")
         def tick_handler():
-            print(psum.value(), pssum.value())
+            print(psum.value(), pssum.value(), psssum.value())
 
         @loop.on("end")
         def end_handler():
+            print("Computation end")
             print(psum.value(), pssum.value())
 
         for i in loop:
             # for j in loop:
-            psum += array[i]
-            
+            psum += array2[i]
             # psum += i + 1
             # array[i+1]
             # psum += iff(array[i] > 5, 10, 0)
@@ -39,17 +41,15 @@ if __name__ == "__main__":
 
         psum /= len(array)
 
+
         for i in loop:
             # print("pssum")
             # (array[i] - loop.variables[0]).print()
-            pssum += (array[i] - psum) ** 2
+            pssum += array3[i]
 
         pssum /= len(array)
 
-
-        for i in loop:
-            trash += (psum - pssum) **3
-
+        psssum+=(psum-pssum)
 
 
 

@@ -29,8 +29,8 @@ def evaluate(node, bq_values):
     # Convert to string and check if it's a BQ_x node (usually "BQ_1", "BQ_2", etc.)
     node_str = str(node)
     if node_str.startswith("BQ_"):
-        bq_num = int(node_str.split("_")[1])
-        return bq_values[bq_num - 1]
+        # bq_num = int(node_str.split("_")[1])
+        return bq_values[node_str]
 
     # Handle operator nodes
     # Addition

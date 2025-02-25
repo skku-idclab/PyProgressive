@@ -9,11 +9,12 @@ class SpecialToken(Enum):
 #TODO: operator overloading (ex. s += (d[i] + 1))
 
 class DataItemToken():
-    def __init__(self, array):
+    def __init__(self, array, id):
         self.array = array
+        self.id = id
 
     def __str__(self):
-        return "d[i]"
+        return "d[i]_"+str(self.id)
     
     def __add__(self, other):
         # d[i] + other => Addition(self, other)

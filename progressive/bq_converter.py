@@ -22,7 +22,7 @@ class ConstantizedFunction(Function):
 constantized_map = {}
 
 
-def convert_with_bq(root_node, array_length):
+def convert_with_bq(root_node, array_length, BQ_dict):
     """
     Takes a flattened and constantized expression tree (root_node) and interprets the entire expression
     as a polynomial in terms of the data token (arr_i). Each term a_k * arr_i^k is replaced with a_k * BQ_k.
@@ -80,13 +80,14 @@ def convert_with_bq(root_node, array_length):
     # print("expand sym_expr Result:", sym_expr)
 
     # 4. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
+    # Need to fix if we support multiple arrays.
     arr_i = Symbol("arr_i")
     sym_expr = sym_expr.replace(
-        lambda expr: expr.is_Pow and expr.base == arr_i and expr.exp.is_Integer,
-        lambda expr: Symbol(f"BQ_{int(expr.exp)}")
+        lambda expr: expr.is_Pow and expr.base.name.startswith("arr_") and expr.exp.is_Integer,
+        lambda expr: Symbol(f"BQ_{int(expr.exp)}_of_{expr.base.name.split('_')[1]}")
     ).replace(
-        lambda expr: expr == arr_i,
-        lambda expr: Symbol("BQ_1")
+        lambda expr: type(expr) == Symbol and expr.name.startswith("arr_"),
+        lambda expr: Symbol("BQ_1_of_" + expr.name.split('_')[1])
     )
 
     # print("DataItemToken replace Result:", sym_expr)
@@ -99,6 +100,8 @@ def convert_with_bq(root_node, array_length):
     converted_node = sympy_to_BQ_node(converted_sym_expr)
 
     bq_symbols = [s for s in sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
+    for s in bq_symbols:
+        BQ_dict[s.name] = 0
     if len(bq_symbols) != 0:
         bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
         converted_node.bq_max = bq_max_x
@@ -109,7 +112,7 @@ def convert_with_bq(root_node, array_length):
         label = f"Constantized_var{tem.id}"
         constantized_map[label] = converted_node
 
-    return converted_node
+    return converted_node, BQ_dict
 
 
 def convert_with_bq_from_sympy(sym_expr, array_length):
@@ -146,12 +149,13 @@ def sympy_to_BQ_node(expr):
                 return inner_expr
         if name.startswith("arr_"):
             if name in token_map:
-                return DataItemToken(token_map[name])
+                return token_map[name]
             return DataItemToken()
         
         if name.startswith("BQ_"):
             bqnum = name.split("_")[1]
-            return BQ(bqnum)
+            bqarridx = name.split("_")[3]
+            return BQ(bqnum, bqarridx)
 
         # Otherwise, temporarily handle as Variable(None, 0), needs revision later
         return Variable(None, 0)

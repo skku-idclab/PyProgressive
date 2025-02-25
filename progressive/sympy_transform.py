@@ -32,8 +32,8 @@ def node_to_string(node):
     # 2) Token or Variable?
     if isinstance(node, DataItemToken):
         #symbol_name = f"arr_{id(node.array)}"
-        symbol_name = "arr_i"
-        token_map[symbol_name] = node.array
+        symbol_name = "arr_" + str(node.id)
+        token_map[symbol_name] = node
         return symbol_name  # ex: array[i] -> arr_123
     if isinstance(node, Variable):
         # Convert expr (in Variable) to string
@@ -104,13 +104,15 @@ def sympy_to_node(expr):
             else:
                 return inner_expr
         if name.startswith("arr_"):
+            print("name: ", name)
             if name in token_map:
-                return DataItemToken(token_map[name])
+                return token_map[name]
             return DataItemToken()
         
         if name.startswith("BQ_"):
             bqnum = name.split("_")[1]
-            return BQ(bqnum)
+            bqarridx = name.split("_")[2]
+            return BQ(bqnum, bqarridx)
 
         # others considered as Variable(None, 0). will be modified later
         return Variable(None, 0)

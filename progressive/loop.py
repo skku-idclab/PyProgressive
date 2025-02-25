@@ -42,48 +42,46 @@ class Loop:
         #     print(f"Variable {i}:")
         #     v.expr.print()
        
+
+        BQ_dict = {}
                 
         # compile
-        # 1) convert to BQ
+        # 1) convert to BQ & find BQ that need to calculate(update BQ_dict)
         for var in self.variables:
-            var.expr = convert_with_bq(var.expr, len(self.array))
+            var.expr, BQ_dict = convert_with_bq(var.expr, len(self.array[0]), BQ_dict)
         
-        # print("=== After BQ Conversion ===")
-        # for i, v in enumerate(self.variables, start=1):
-        #     print(f"Variable {i}:")
-        #     v.print()
-
+        print("=== After BQ Conversion ===")
+        for i, v in enumerate(self.variables, start=1):
+            print(f"Variable {i}:")
+            v.print()
 
         # 2) find max BQ
         max_bq = 0
         for var in self.variables:
             if hasattr(var.expr, "bq_max"):
                 max_bq = max(var.expr.bq_max, max_bq)
+
         
-
-
-        # run with time estimators
-
-        # 1) compute BQs iteratively
-        BQ_list = [0] * (max_bq)
         iter_accum_duration = 0
-        for idx in range(0, len(self.array.data)):
+        for idx in range(0, len(self.array[0].data)):
             iter_start = time.perf_counter()
+            for keys in BQ_dict.keys():
+                degree, compute_arr = keys.split("_")[1], keys.split("_")[3]
+                target_arr = None
+                for array in self.array:
+                    if array.id == int(compute_arr):
+                        target_arr = array
+                if(target_arr == None):
+                    raise ValueError("Array not found")
+                BQ_dict[keys] = (BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
 
-            for i in range(0, max_bq):
-                BQ_list[i] = (BQ_list[i] * (idx) + self.array.data[idx] ** (i+1)) / (idx+1)
-            #print("BQ list:", BQ_list)
-
-            # 2) evaluate each variable
+            #print("BQ dict:", BQ_dict)
 
             for var in self.variables:
-                result = evaluate(var, BQ_list)
+                result = evaluate(var, BQ_dict)
                 var.val = result
-                #print("result:", result)
                 time.sleep(0.2)
 
-
-            # 3) time estimation
             iter_end = time.perf_counter()
 
             iter_accum_duration += iter_end - iter_start
@@ -91,6 +89,37 @@ class Loop:
             if iter_accum_duration > self.interval:
                 self.emit("tick")
                 iter_accum_duration -= self.interval
+
+
+        # run with time estimators
+
+        # 1) compute BQs iteratively
+        # BQ_list = [0] * (max_bq)
+        # iter_accum_duration = 0
+        # for idx in range(0, len(self.array[0].data)):
+        #     iter_start = time.perf_counter()
+
+        #     for i in range(0, max_bq):
+        #         BQ_list[i] = (BQ_list[i] * (idx) + self.array[0].data[idx] ** (i+1)) / (idx+1)
+        #     #print("BQ list:", BQ_list)
+
+        #     # 2) evaluate each variable
+
+        #     for var in self.variables:
+        #         result = evaluate(var, BQ_list)
+        #         var.val = result
+        #         #print("result:", result)
+        #         time.sleep(0.2)
+
+
+        #     # 3) time estimation
+        #     iter_end = time.perf_counter()
+
+        #     iter_accum_duration += iter_end - iter_start
+            
+        #     if iter_accum_duration > self.interval:
+        #         self.emit("tick")
+        #         iter_accum_duration -= self.interval
 
 
         self.emit("end")
@@ -117,7 +146,7 @@ class Loop:
         # constantize all variables if they are not 
         for var in self.variables:
                 if not isinstance(var.expr, Constantized) and isinstance(var.expr, Node) and getattr(var, "modified", False):
-                    var.expr = Multiplication(var.expr, len(self.array.data))
+                    var.expr = Multiplication(var.expr, len(self.array[0].data))
             
         self.cursor_in_loop = False        
         raise StopIteration  # Stop iteration after yielding once
