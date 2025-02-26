@@ -105,12 +105,13 @@ class Constantized(Node):
     
 
 class BQ(Node):
-    def __init__(self, k, arridx):
+    def __init__(self, k, arridx, name):
         self.k = k
         self.arridx = arridx
+        self.name = name
 
     def __str__(self):
-        return f"BQ_{self.k}_of_{self.arridx}"
+        return self.name
 
 
 def print_tree(node, level=0):

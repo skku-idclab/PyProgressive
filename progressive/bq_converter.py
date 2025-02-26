@@ -60,20 +60,20 @@ def convert_with_bq(root_node, array_length, BQ_dict):
         raise ValueError(f"sympify failed: {expr_str}") from e
 
     # 2. If there's a ConstantizedFunction inside, process it recursively
-    def replace_constantized_func(expr):
-        # If expr is ConstantizedFunction
-        if expr.func == ConstantizedFunction:
-            # expr.args = (var_name, inner_expr)
-            var_name = expr.args[0]
-            inner_expr = expr.args[1]
-            # Recursive conversion: inner_expr is already a sympy expression,
-            # so we handle it with our polynomial replacement approach.
-            converted_inner = convert_with_bq_from_sympy(inner_expr, array_length)
-            # Multiply the inner conversion result by array_length.
-            return converted_inner * array_length
-        return expr
+    # def replace_constantized_func(expr):
+    #     # If expr is ConstantizedFunction
+    #     if expr.func == ConstantizedFunction:
+    #         # expr.args = (var_name, inner_expr)
+    #         var_name = expr.args[0]
+    #         inner_expr = expr.args[1]
+    #         # Recursive conversion: inner_expr is already a sympy expression,
+    #         # so we handle it with our polynomial replacement approach.
+    #         converted_inner = convert_with_bq_from_sympy(inner_expr, array_length)
+    #         # Multiply the inner conversion result by array_length.
+    #         return converted_inner * array_length
+    #     return expr
 
-    sym_expr = sym_expr.replace(lambda expr: expr.func == ConstantizedFunction, replace_constantized_func)
+    # sym_expr = sym_expr.replace(lambda expr: expr.func == ConstantizedFunction, replace_constantized_func)
     
     # 3. Expand the expression
     sym_expr = expand(sym_expr)
@@ -81,32 +81,39 @@ def convert_with_bq(root_node, array_length, BQ_dict):
 
     # 4. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
     # Need to fix if we support multiple arrays.
-    arr_i = Symbol("arr_i")
-    sym_expr = sym_expr.replace(
-        lambda expr: expr.is_Pow and expr.base.name.startswith("arr_") and expr.exp.is_Integer,
-        lambda expr: Symbol(f"BQ_{int(expr.exp)}_of_{expr.base.name.split('_')[1]}")
-    ).replace(
-        lambda expr: type(expr) == Symbol and expr.name.startswith("arr_"),
-        lambda expr: Symbol("BQ_1_of_" + expr.name.split('_')[1])
-    )
+  
+    print("before convert:", sym_expr)
+    new_sym_expr = transform_expr(sym_expr)
+    print("new_sym_expr:", new_sym_expr)
+    # sym_expr = sym_expr.replace(
+    #     lambda expr: expr.is_Pow and expr.base.name.startswith("arr_") and expr.exp.is_Integer,
+    #     lambda expr: Symbol(f"BQ_{int(expr.exp)}_of_{expr.base.name.split('_')[1]}")
+    # ).replace(
+    #     lambda expr: type(expr) == Symbol and expr.name.startswith("arr_"),
+    #     lambda expr: Symbol("BQ_1_of_" + expr.name.split('_')[1])
+    # )
+    
 
     # print("DataItemToken replace Result:", sym_expr)
 
-    converted_sym_expr = simplify(sym_expr)
+    converted_sym_expr = simplify(new_sym_expr)
 
     # print("convert Result:", converted_sym_expr)
 
     # 5. Finally, convert the resulting sympy expression back to our Node structure and return it
     converted_node = sympy_to_BQ_node(converted_sym_expr)
 
-    bq_symbols = [s for s in sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
+    bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
     for s in bq_symbols:
         BQ_dict[s.name] = 0
-    if len(bq_symbols) != 0:
-        bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
-        converted_node.bq_max = bq_max_x
-    elif hasattr(converted_node, "bq_max"):
-        converted_node.bq_max = 0
+    # if len(bq_symbols) != 0:
+    #     bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
+    #     converted_node.bq_max = bq_max_x
+    # elif hasattr(converted_node, "bq_max"):
+    #     converted_node.bq_max = 0
+
+    print("BQ_dict:", BQ_dict)
+
 
     if constantized_flag:
         label = f"Constantized_var{tem.id}"
@@ -153,9 +160,10 @@ def sympy_to_BQ_node(expr):
             return DataItemToken()
         
         if name.startswith("BQ_"):
+            print("name:", name)
             bqnum = name.split("_")[1]
             bqarridx = name.split("_")[3]
-            return BQ(bqnum, bqarridx)
+            return BQ(bqnum, bqarridx, name)
 
         # Otherwise, temporarily handle as Variable(None, 0), needs revision later
         return Variable(None, 0)
@@ -199,3 +207,106 @@ def sympy_to_BQ_node(expr):
         return expr
 
     raise TypeError(f"Unsupported sympy expr type: {type(expr)} => {expr}")
+
+import re
+from sympy import Symbol, Pow, Mul
+from sympy.core.expr import Expr
+
+def extract_arr_info(expr: Expr):
+    """
+    If expr is of the form constant * arr_{number} or constant * (arr_{number}**exponent)
+    where there is exactly one non-constant factor matching arr_{number} (or its power),
+    return (number, exponent). Otherwise, return (None, None).
+    """
+    # Factor out constant from a multiplication.
+    if expr.is_Mul:
+        coeff, rest = expr.as_coeff_Mul()
+        # If there are multiple non-constant factors, fail.
+        if rest.is_Mul:
+            return None, None
+        else:
+            return extract_arr_info(rest)
+    # Handle power expression: arr_{number}**exponent
+    if expr.is_Pow:
+        base, exponent = expr.as_base_exp()
+        match = re.fullmatch(r'arr_(\d+)', base.name)
+        if match and exponent.is_Integer:
+            return match.group(1), exponent  # e.g., ('1', 2)
+        return None, None
+    # Handle simple symbol: arr_{number}
+    if expr.is_Symbol:
+        match = re.fullmatch(r'arr_(\d+)', expr.name)
+        if match:
+            # No exponent specified: we'll treat it as exponent 1 later in division/multiplication
+            return match.group(1), None
+    return None, None
+
+def transform_expr(expr: Expr) -> Expr:
+    # Process addition by transforming each term separately.
+    if expr.is_Add:
+        new_args = [transform_expr(arg) for arg in expr.args]
+        return expr.func(*new_args)
+    
+    # Process multiplication.
+    if expr.is_Mul:
+        # First, check for a division pattern using as_numer_denom.
+        numer, denom = expr.as_numer_denom()
+        # Only apply division rule if neither numerator nor denominator is an addition.
+        if denom != 1 and not (numer.is_Add or denom.is_Add):
+            num_symbol, num_exp = extract_arr_info(numer)
+            den_symbol, den_exp = extract_arr_info(denom)
+            if num_symbol and den_symbol:
+                numer_coeff, _ = numer.as_coeff_Mul()
+                denom_coeff, _ = denom.as_coeff_Mul()
+                const_factor = numer_coeff / denom_coeff
+                # If exponent is missing, treat it as 1.
+                num_exp = num_exp if num_exp is not None else 1
+                den_exp = den_exp if den_exp is not None else 1
+                # Always include the "pow" part.
+                num_str = f"{num_symbol}_pow_{num_exp}"
+                den_str = f"{den_symbol}_pow_{den_exp}"
+                return const_factor * Symbol(f'BQ_special_{num_str}_div_{den_str}')
+        
+        # If not a pure division, try to detect a two-factor multiplication.
+        coeff, rest = expr.as_coeff_Mul()
+        factors = list(rest.args) if rest.is_Mul else [rest]
+        if len(factors) == 2:
+            info1 = extract_arr_info(factors[0])
+            info2 = extract_arr_info(factors[1])
+            if info1[0] is not None and info2[0] is not None:
+                exp1 = info1[1] if info1[1] is not None else 1
+                exp2 = info2[1] if info2[1] is not None else 1
+                a_str = f"{info1[0]}_pow_{exp1}"
+                b_str = f"{info2[0]}_pow_{exp2}"
+                return coeff * Symbol(f'BQ_special_{a_str}_mul_{b_str}')
+        # Otherwise, recursively process each factor.
+        new_args = [transform_expr(arg) for arg in expr.args]
+        return Mul(*new_args)
+    
+    # Process power expressions: if the base is of the form arr_{number},
+    # convert arr_i**k to BQ_k_of_i (using the normal rule).
+    if expr.is_Pow:
+        base, exponent = expr.as_base_exp()
+        if base.is_Symbol:
+            match = re.fullmatch(r'arr_(\d+)', base.name)
+            if match and exponent.is_Integer:
+                exp_val = exponent if exponent is not None else 1
+                return Symbol(f'BQ_{exp_val}_of_{match.group(1)}')
+        new_base = transform_expr(base)
+        new_exponent = transform_expr(exponent)
+        return new_base ** new_exponent
+
+    # General symbol handling for simple symbols:
+    # Keep the original rule: arr_i becomes BQ_1_of_i.
+    if expr.is_Symbol:
+        if expr.name.startswith("arr_"):
+            match = re.fullmatch(r'arr_(\d+)', expr.name)
+            if match:
+                return Symbol(f'BQ_1_of_{match.group(1)}')
+    
+    # Recursively process any sub-expressions.
+    if expr.args:
+        new_args = tuple(transform_expr(arg) for arg in expr.args)
+        return expr.func(*new_args)
+    
+    return expr

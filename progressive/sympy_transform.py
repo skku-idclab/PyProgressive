@@ -104,7 +104,6 @@ def sympy_to_node(expr):
             else:
                 return inner_expr
         if name.startswith("arr_"):
-            print("name: ", name)
             if name in token_map:
                 return token_map[name]
             return DataItemToken()

@@ -4,55 +4,42 @@ if __name__ == "__main__":
     # do we actually need to create a session?
 
     ps = pp.Session()
-    array = pp.Array([10, 20, 0, 21, 5, 42, 11, 14, 34, 13])
-    array2 = pp.Array([100, -20, 10, 71, 900, 422, 161, 144, 434, 173])
-    array3 = pp.Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    array0 = pp.Array([10, 20, 3, 21, 5, 42, 11, 14, 34, 13])
+    array1 = pp.Array([100, -20, 10, 71, 900, 422, 161, 144, 434, 173])
+    array2 = pp.Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 
-    with ps.loop([array, array2, array3], interval=1) as loop:
-        psum = loop.add_variable(0)
-        pssum = loop.add_variable(0)
-        psssum = loop.add_variable(0)
+    with ps.loop([array0, array1, array2], interval=1) as loop:
+        xmean = loop.add_variable(0)
+        ymean = loop.add_variable(0)
+        cov = loop.add_variable(0)
 
-        
 
         @loop.on("tick")
         def tick_handler():
-            print(psum.value(), pssum.value(), psssum.value())
+            print(xmean.value(), ymean.value(), cov.value())
 
         @loop.on("end")
         def end_handler():
             print("Computation end")
-            print(psum.value(), pssum.value())
+            print(xmean.value(), ymean.value(), cov.value())
 
         for i in loop:
-            # for j in loop:
-            psum += array2[i]
-            # psum += i + 1
-            # array[i+1]
-            # psum += iff(array[i] > 5, 10, 0)
-            # if array[i] > 5:
-            #     if array[i] < 10:
-            #         psum += 1
+            xmean += array0[i]
+        xmean /= len(array0)
+
+            
+        for i in loop:
+            ymean += array1[i]
+        ymean /= len(array0)
+
+        for i in loop:
+            cov += (array0[i] - xmean) * (array1[i] - ymean)
+        cov /= len(array0)
+
+
+
         
-        # arr = env.AddArray(array)
-        # i = env.itertaor()
-        # program = InLoop(array, MultipleStatements(Accumulate(psum, arr), Accumulate(psum, 1)))
-
-        psum /= len(array)
-
-
-        for i in loop:
-            # print("pssum")
-            # (array[i] - loop.variables[0]).print()
-            pssum += array3[i]
-
-        pssum /= len(array)
-
-        psssum+=(psum-pssum)
-
-
-
 
 
     # loop = pp.Loop(data, tick=1)

@@ -50,10 +50,10 @@ class Loop:
         for var in self.variables:
             var.expr, BQ_dict = convert_with_bq(var.expr, len(self.array[0]), BQ_dict)
         
-        print("=== After BQ Conversion ===")
-        for i, v in enumerate(self.variables, start=1):
-            print(f"Variable {i}:")
-            v.print()
+        # print("=== After BQ Conversion ===")
+        # for i, v in enumerate(self.variables, start=1):
+        #     print(f"Variable {i}:")
+        #     v.print()
 
         # 2) find max BQ
         max_bq = 0
@@ -66,16 +66,37 @@ class Loop:
         for idx in range(0, len(self.array[0].data)):
             iter_start = time.perf_counter()
             for keys in BQ_dict.keys():
-                degree, compute_arr = keys.split("_")[1], keys.split("_")[3]
-                target_arr = None
-                for array in self.array:
-                    if array.id == int(compute_arr):
-                        target_arr = array
-                if(target_arr == None):
-                    raise ValueError("Array not found")
-                BQ_dict[keys] = (BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
+                if keys.split("_")[1] == "special":
+                    arr1id, pow1 = keys.split("_")[2], keys.split("_")[4]
+                    arr2id, pow2 = keys.split("_")[6], keys.split("_")[8]
+                    operator  = keys.split("_")[5]
 
-            #print("BQ dict:", BQ_dict)
+                    for array in self.array:
+                        if array.id == int(arr1id):
+                            arr1 = array
+                        if array.id == int(arr2id):
+                            arr2 = array
+                    if arr1 == None or arr2 == None:
+                        raise ValueError("Array not found")
+
+                    if operator == "mul":
+                        BQ_dict[keys] = (BQ_dict[keys] * (idx) + (arr1.data[idx] ** (int(pow1))) * (arr2.data[idx] ** (int(pow2)))) / (idx+1)
+                    elif operator == "div":
+                        BQ_dict[keys] = (BQ_dict[keys] * (idx) + (arr1.data[idx] ** (int(pow1))) / (arr2.data[idx] ** (int(pow2)))) / (idx+1)
+                    else:
+                        raise ValueError("Operator not found")
+
+                else:
+                    degree, compute_arr = keys.split("_")[1], keys.split("_")[3]
+                    target_arr = None
+                    for array in self.array:
+                        if array.id == int(compute_arr):
+                            target_arr = array
+                    if(target_arr == None):
+                        raise ValueError("Array not found")
+                    BQ_dict[keys] = (BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
+
+            # print("BQ dict:", BQ_dict)
 
             for var in self.variables:
                 result = evaluate(var, BQ_dict)
