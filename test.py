@@ -11,31 +11,51 @@ if __name__ == "__main__":
 
     with ps.loop([array0, array1, array2], interval=1) as loop:
         xmean = loop.add_variable(0)
+        xstd = loop.add_variable(0)
         ymean = loop.add_variable(0)
+        ystd = loop.add_variable(0)
         cov = loop.add_variable(0)
+        cor = loop.add_variable(0)
+        a = loop.add_variable(0)
 
 
         @loop.on("tick")
         def tick_handler():
-            print(xmean.value(), ymean.value(), cov.value())
+            print(xstd.value(), ystd.value(), cov.value(), abs(cor.value())**0.5)
 
         @loop.on("end")
         def end_handler():
             print("Computation end")
-            print(xmean.value(), ymean.value(), cov.value())
+            print(xstd.value(), ystd.value(), cov.value())
 
         for i in loop:
             xmean += array0[i]
         xmean /= len(array0)
 
-            
+        for i in loop:
+            xstd += (array0[i] - xmean) ** 2
+        xstd /= len(array0)-1
+
         for i in loop:
             ymean += array1[i]
         ymean /= len(array0)
 
         for i in loop:
+            ystd += (array1[i] - ymean) ** 2
+        ystd /= len(array0)-1
+
+        for i in loop:
             cov += (array0[i] - xmean) * (array1[i] - ymean)
-        cov /= len(array0)
+        cov /= len(array0)-1
+
+        for i in loop:
+            cor += 0
+
+    
+        cor += cov**2
+        cor /= xstd +1e-9
+        cor /= ystd +1e-9
+
 
 
 

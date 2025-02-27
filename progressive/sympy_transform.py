@@ -83,7 +83,7 @@ def node_to_string(node):
 
     # 7) BQ
     if isinstance(node, BQ):
-        return f"BQ_{node.k}"
+        return node.name
     
 
 

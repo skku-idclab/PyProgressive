@@ -50,10 +50,12 @@ def convert_with_bq(root_node, array_length, BQ_dict):
         tem = root_node
         root_node = root_node.expr
         constantized_flag = True
+    # print("root_node:")
+    # root_node.print()
     
     # 1. Convert Node → string → sympy expression
     expr_str = node_to_string(root_node)
-    # print("expr_str:", expr_str)
+    #print("expr_str:", expr_str)
     try:
         sym_expr = sympify(expr_str, locals={"Constantized": ConstantizedFunction})
     except Exception as e:
@@ -82,9 +84,9 @@ def convert_with_bq(root_node, array_length, BQ_dict):
     # 4. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
     # Need to fix if we support multiple arrays.
   
-    print("before convert:", sym_expr)
+    #print("before convert:", sym_expr)
     new_sym_expr = transform_expr(sym_expr)
-    print("new_sym_expr:", new_sym_expr)
+    #print("new_sym_expr:", new_sym_expr)
     # sym_expr = sym_expr.replace(
     #     lambda expr: expr.is_Pow and expr.base.name.startswith("arr_") and expr.exp.is_Integer,
     #     lambda expr: Symbol(f"BQ_{int(expr.exp)}_of_{expr.base.name.split('_')[1]}")
@@ -112,7 +114,7 @@ def convert_with_bq(root_node, array_length, BQ_dict):
     # elif hasattr(converted_node, "bq_max"):
     #     converted_node.bq_max = 0
 
-    print("BQ_dict:", BQ_dict)
+    #print("BQ_dict:", BQ_dict)
 
 
     if constantized_flag:
@@ -160,7 +162,6 @@ def sympy_to_BQ_node(expr):
             return DataItemToken()
         
         if name.startswith("BQ_"):
-            print("name:", name)
             bqnum = name.split("_")[1]
             bqarridx = name.split("_")[3]
             return BQ(bqnum, bqarridx, name)
@@ -229,7 +230,10 @@ def extract_arr_info(expr: Expr):
     # Handle power expression: arr_{number}**exponent
     if expr.is_Pow:
         base, exponent = expr.as_base_exp()
-        match = re.fullmatch(r'arr_(\d+)', base.name)
+        if hasattr(base, 'name'):
+            match = re.fullmatch(r'arr_(\d+)', base.name)
+        else:
+            return None, None
         if match and exponent.is_Integer:
             return match.group(1), exponent  # e.g., ('1', 2)
         return None, None

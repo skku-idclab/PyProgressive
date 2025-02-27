@@ -31,6 +31,7 @@ class Loop:
 
     def __exit__(self, *args):
         # run after the entire block 
+        
 
 
         # flatten each variable by using Sympy
@@ -40,7 +41,7 @@ class Loop:
         # print("=== After Flatten with Sympy ===")
         # for i, v in enumerate(self.variables, start=1):
         #     print(f"Variable {i}:")
-        #     v.expr.print()
+        #     v.print()
        
 
         BQ_dict = {}
