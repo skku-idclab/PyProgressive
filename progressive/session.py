@@ -1,4 +1,3 @@
-from .loop import Loop
 
 
 class Session:
@@ -16,10 +15,5 @@ class Session:
         
         return decorator
 
-
-    
-    def loop(self, array, interval = 1):
-        return Loop(self, array, interval)
-    
         
         
