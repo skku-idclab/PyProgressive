@@ -110,8 +110,8 @@ def sympy_to_node(expr):
         
         if name.startswith("BQ_"):
             bqnum = name.split("_")[1]
-            bqarridx = name.split("_")[2]
-            return BQ(bqnum, bqarridx)
+            bqarridx = name.split("_")[3]
+            return BQ(bqnum, bqarridx, name)
 
         # others considered as Variable(None, 0). will be modified later
         return Variable(None, 0)

@@ -22,7 +22,7 @@ class ConstantizedFunction(Function):
 constantized_map = {}
 
 
-def convert_with_bq(root_node, array_length, BQ_dict):
+def convert_with_bq(root_node, BQ_dict):
     """
     Takes a flattened and constantized expression tree (root_node) and interprets the entire expression
     as a polynomial in terms of the data token (arr_i). Each term a_k * arr_i^k is replaced with a_k * BQ_k.
@@ -55,27 +55,13 @@ def convert_with_bq(root_node, array_length, BQ_dict):
     
     # 1. Convert Node → string → sympy expression
     expr_str = node_to_string(root_node)
-    #print("expr_str:", expr_str)
+    print("expr_str:", expr_str)
     try:
         sym_expr = sympify(expr_str, locals={"Constantized": ConstantizedFunction})
     except Exception as e:
         raise ValueError(f"sympify failed: {expr_str}") from e
 
-    # 2. If there's a ConstantizedFunction inside, process it recursively
-    # def replace_constantized_func(expr):
-    #     # If expr is ConstantizedFunction
-    #     if expr.func == ConstantizedFunction:
-    #         # expr.args = (var_name, inner_expr)
-    #         var_name = expr.args[0]
-    #         inner_expr = expr.args[1]
-    #         # Recursive conversion: inner_expr is already a sympy expression,
-    #         # so we handle it with our polynomial replacement approach.
-    #         converted_inner = convert_with_bq_from_sympy(inner_expr, array_length)
-    #         # Multiply the inner conversion result by array_length.
-    #         return converted_inner * array_length
-    #     return expr
-
-    # sym_expr = sym_expr.replace(lambda expr: expr.func == ConstantizedFunction, replace_constantized_func)
+    
     
     # 3. Expand the expression
     sym_expr = expand(sym_expr)
@@ -86,7 +72,7 @@ def convert_with_bq(root_node, array_length, BQ_dict):
   
     #print("before convert:", sym_expr)
     new_sym_expr = transform_expr(sym_expr)
-    #print("new_sym_expr:", new_sym_expr)
+    # print("new_sym_expr:", new_sym_expr)
     # sym_expr = sym_expr.replace(
     #     lambda expr: expr.is_Pow and expr.base.name.startswith("arr_") and expr.exp.is_Integer,
     #     lambda expr: Symbol(f"BQ_{int(expr.exp)}_of_{expr.base.name.split('_')[1]}")
@@ -100,7 +86,7 @@ def convert_with_bq(root_node, array_length, BQ_dict):
 
     converted_sym_expr = simplify(new_sym_expr)
 
-    # print("convert Result:", converted_sym_expr)
+    #print("convert Result:", converted_sym_expr)
 
     # 5. Finally, convert the resulting sympy expression back to our Node structure and return it
     converted_node = sympy_to_BQ_node(converted_sym_expr)
@@ -114,8 +100,8 @@ def convert_with_bq(root_node, array_length, BQ_dict):
     # elif hasattr(converted_node, "bq_max"):
     #     converted_node.bq_max = 0
 
-    #print("BQ_dict:", BQ_dict)
-
+    # print("BQ_dict:", BQ_dict)
+    converted_node.print()
 
     if constantized_flag:
         label = f"Constantized_var{tem.id}"

@@ -102,7 +102,7 @@ class Loop:
             for var in self.variables:
                 result = evaluate(var, BQ_dict)
                 var.val = result
-                time.sleep(0.2)
+                
 
             iter_end = time.perf_counter()
 
@@ -111,6 +111,7 @@ class Loop:
             if iter_accum_duration > self.interval:
                 self.emit("tick")
                 iter_accum_duration -= self.interval
+            
 
 
         # run with time estimators

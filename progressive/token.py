@@ -6,7 +6,6 @@ class SpecialToken(Enum):
 
 
 # d[i]
-#TODO: operator overloading (ex. s += (d[i] + 1))
 
 class DataItemToken():
     def __init__(self, array, id):
@@ -51,6 +50,9 @@ class DataItemToken():
     def __pow__(self, other):
         # d[i] ** other => PowerN(self, other)
         return PowerN(self, other)
+    
+    def __len__(self):
+        return len(self.array)
         
 
 # len(d)
