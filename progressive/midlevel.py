@@ -12,7 +12,7 @@ global_BQ_dict = {}
 def create_session(arrays):
     def accum(expr):
         bq_expr, _BQ_dict = convert_with_bq(expr, global_BQ_dict)
-        return Variable(None, bq_expr)
+        return Multiplication(10, Variable(None, bq_expr))
     def each(i):
         if type(i) is int:
             return DataItemToken(arrays[i], arrays[i].id)
@@ -35,7 +35,7 @@ class Program:
         print("=== After Flatten with Sympy ===")
         for i, v in enumerate(variables, start=1):
             print(f"Variable {i}:")
-            v.print()
+            #v.print()
        
 
         BQ_dict = {}
@@ -93,19 +93,27 @@ class Program:
 
             # print("BQ dict:", BQ_dict)
 
+            eval_BQ_dict = {}
+            for BQs in BQ_dict.keys():
+                eval_BQ_dict[BQs] = BQ_dict[BQs] * len(self.array[0].data)
+
+            print("Eval BQ dict:", eval_BQ_dict)
+
             for var in self.args:
-                result = evaluate(var, BQ_dict)
+                result = evaluate(var, eval_BQ_dict, length = len(self.array[0].data))
                 var.val = result
                 time.sleep(0.1)
+
+            callback(*self.args)
                 
 
-            iter_end = time.perf_counter()
+            # iter_end = time.perf_counter()
 
-            iter_accum_duration += iter_end - iter_start
+            # iter_accum_duration += iter_end - iter_start
             
-            if iter_accum_duration > interval:
-                callback(*self.args)
-                iter_accum_duration -= interval
+            # if iter_accum_duration > interval:
+            #     callback(*self.args)
+            #     iter_accum_duration -= interval
 
 
 

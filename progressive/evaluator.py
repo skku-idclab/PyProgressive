@@ -1,7 +1,7 @@
 from progressive.expression import Addition, Subtraction, Multiplication, Division, PowerN
 from progressive.variable import Variable
 
-def evaluate(node, bq_values):
+def evaluate(node, bq_values, length = None):
     """
     Evaluates the given computation tree (node) and returns the final value.
     bq_values is a list of numeric values corresponding to each BQ symbol,
@@ -30,28 +30,28 @@ def evaluate(node, bq_values):
     node_str = str(node)
     if node_str.startswith("BQ_"):
         # bq_num = int(node_str.split("_")[1])
-        return bq_values[node_str]
+        return bq_values[node_str] 
 
     # Handle operator nodes
     # Addition
     if isinstance(node, Addition):
-        return evaluate(node.left, bq_values) + evaluate(node.right, bq_values)
+        return evaluate(node.left, bq_values, length) + evaluate(node.right, bq_values, length)
     # Subtraction
     elif isinstance(node, Subtraction):
-        return evaluate(node.left, bq_values) - evaluate(node.right, bq_values)
+        return evaluate(node.left, bq_values, length) - evaluate(node.right, bq_values, length)
     # Multiplication
     elif isinstance(node, Multiplication):
-        return evaluate(node.left, bq_values) * evaluate(node.right, bq_values)
+        return evaluate(node.left, bq_values, length) * evaluate(node.right, bq_values, length)
     # Division
     elif isinstance(node, Division):
-        return evaluate(node.left, bq_values) / evaluate(node.right, bq_values)
+        return evaluate(node.left, bq_values, length) / evaluate(node.right, bq_values, length)
     # PowerN
     elif isinstance(node, PowerN):
-        return evaluate(node.base, bq_values) ** evaluate(node.exponent, bq_values)
+        return evaluate(node.base, bq_values, length) ** evaluate(node.exponent, bq_values, length)
 
     # If the node has an 'expr' attribute, evaluate that (e.g., Variable node)
     if hasattr(node, "expr"):
-        return evaluate(node.expr, bq_values)
+        return evaluate(node.expr, bq_values, length)
 
     # If the node provides a value() method, use it to evaluate
     if hasattr(node, "value") and callable(node.value):
