@@ -6,7 +6,7 @@ from sympy import sympify, simplify, Symbol, expand
 
 # expression.py 안에 있는 클래스들 import
 from .expression import (
-    Constantized, Node, BinaryOperationNode, Addition, Subtraction,
+    Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
     InplaceMultiplication, InplaceDivision, BQ
@@ -17,7 +17,6 @@ from .token import DataItemToken
 
 
 token_map = {}
-constantized_map = {}
 def node_to_string(node):
     """
     Convert our Node (including Inplace nodes) into a string
@@ -72,15 +71,6 @@ def node_to_string(node):
         exp_str = node_to_string(node.exponent)
         return f"({base_str} ** {exp_str})"
 
-    # 6) Constantized 
-    if isinstance(node, Constantized):
-        # TODO: handle Constantized node 
-        label = f"Constantized_var{node.id}"
-        constantized_map[label] = node
-        expr_str = node_to_string(node.expr)
-        return label
-
-
     # 7) BQ
     if isinstance(node, BQ):
         return node.name
@@ -97,12 +87,6 @@ def sympy_to_node(expr):
     """
     if isinstance(expr, sympy.Symbol):
         name = str(expr)
-        if name.startswith("Constantized_var"):
-            inner_expr = constantized_map[name]
-            if inner_expr is None:
-                raise ValueError(f"Constantized node '{name}' has no inner expression")
-            else:
-                return inner_expr
         if name.startswith("arr_"):
             if name in token_map:
                 return token_map[name]

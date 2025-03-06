@@ -4,7 +4,7 @@ import sympy
 from sympy import sympify, simplify, Symbol, expand, Poly, Function
 from .sympy_transform import node_to_string, token_map
 from .expression import (
-    Constantized, Node, BinaryOperationNode, Addition, Subtraction,
+    Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
     InplaceMultiplication, InplaceDivision, BQ
@@ -12,22 +12,13 @@ from .expression import (
 from .variable import Variable
 from .token import DataItemToken
 
-# User-defined sympy function: function to represent constantized nodes
-class ConstantizedFunction(Function):
-    @classmethod
-    def eval(cls, var_name, inner_expr):
-        # Do not evaluate immediately during the eval stage; preserve it.
-        return None
 
-constantized_map = {}
 
 
 def convert_with_bq(root_node, BQ_dict):
     """
     Takes a flattened and constantized expression tree (root_node) and interprets the entire expression
     as a polynomial in terms of the data token (arr_i). Each term a_k * arr_i^k is replaced with a_k * BQ_k.
-    Additionally, if the expression contains ConstantizedFunction("var", inner_expr), the inner expression (inner_expr) is
-    recursively converted and the result is used.
     
     In the end, for example:
        for i in loop:
@@ -43,21 +34,12 @@ def convert_with_bq(root_node, BQ_dict):
     Returns:
         Node: The converted expression tree with BQ expansion applied.
     """
-
-    constantized_flag = False
-
-    if isinstance(root_node, Constantized):
-        tem = root_node
-        root_node = root_node.expr
-        constantized_flag = True
-    # print("root_node:")
-    # root_node.print()
     
     # 1. Convert Node → string → sympy expression
     expr_str = node_to_string(root_node)
     # print("expr_str:", expr_str)
     try:
-        sym_expr = sympify(expr_str, locals={"Constantized": ConstantizedFunction})
+        sym_expr = sympify(expr_str)
     except Exception as e:
         raise ValueError(f"sympify failed: {expr_str}") from e
 
@@ -103,10 +85,6 @@ def convert_with_bq(root_node, BQ_dict):
     # print("BQ_dict:", BQ_dict)
     converted_node.print()
 
-    if constantized_flag:
-        label = f"Constantized_var{tem.id}"
-        constantized_map[label] = converted_node
-
     return converted_node, BQ_dict
 
 
@@ -118,12 +96,6 @@ def sympy_to_BQ_node(expr):
     """
     if isinstance(expr, sympy.Symbol):
         name = str(expr)
-        if name.startswith("Constantized_var"):
-            inner_expr = constantized_map[name]
-            if inner_expr is None:
-                raise ValueError(f"Constantized node '{name}' has no inner expression")
-            else:
-                return inner_expr
         if name.startswith("arr_"):
             if name in token_map:
                 return token_map[name]

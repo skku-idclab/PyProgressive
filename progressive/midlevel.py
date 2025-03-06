@@ -1,6 +1,6 @@
 from .token import SpecialToken
 from .variable import Variable
-from .expression import Constantized, Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
+from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
 from .token import DataItemToken
 from .array import Array
 from .bq_converter import convert_with_bq

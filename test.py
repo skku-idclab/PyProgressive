@@ -7,10 +7,14 @@ if __name__ == "__main__":
 
 
     accum, each = pp.create_session([array0, array1, array2])
-    xmean = accum(each(0)/each(2)) / len(array0)
+    xmean = accum(each(0)) / len(array0)
     xvar = accum((xmean - each(0))**2) / len(array0)
+    ymean = accum(each(1)) / len(array1)
+    yvar = accum((ymean - each(1))**2) / len(array1)
+
+    xycov = accum((each(0) - xmean) * (each(1) - ymean)) / len(array0)
 
 
-    compiled = pp.progressify(xmean, xvar, array_list = [array0, array1, array2])
-    compiled.run(interval=1, callback = lambda xmean, xvar: print(xmean.val, xvar.val))
+    compiled = pp.progressify(xvar, yvar, xycov, array_list = [array0, array1, array2])
+    compiled.run(interval=1, callback = lambda xvar, yvar, xycov: print(xvar.val, yvar.val, xycov.val))
 
