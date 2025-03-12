@@ -4,14 +4,12 @@ import sympy
 from sympy import sympify, simplify, Symbol, expand
 
 
-# expression.py 안에 있는 클래스들 import
 from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
     InplaceMultiplication, InplaceDivision, BQ
 )
-# Variable, DataItemToken 등도 import
 from .variable import Variable
 from .token import DataItemToken
 
@@ -154,8 +152,6 @@ def flatten_with_sympy(root_node):
     expanded_expr = expand(sym_expr)
     # print(f"expanded expr: {expanded_expr}")
     new_root_node = sympy_to_node(expanded_expr)
-    #print("=== After Flatten with Sympy ===")
-    #new_root_node.print()
     return new_root_node
 
 

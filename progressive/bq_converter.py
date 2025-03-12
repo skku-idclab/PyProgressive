@@ -1,7 +1,8 @@
 # bq_converter.py
 
 import sympy
-from sympy import sympify, simplify, Symbol, expand, Poly, Function
+from sympy import sympify, simplify, Symbol, expand, Poly, Function, Mul, Pow
+from sympy.core.expr import Expr
 from .sympy_transform import node_to_string, token_map
 from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
@@ -11,8 +12,9 @@ from .expression import (
 )
 from .variable import Variable
 from .token import DataItemToken
+from .array import global_arraylist
 
-
+import re
 
 
 def convert_with_bq(root_node, BQ_dict):
@@ -47,23 +49,14 @@ def convert_with_bq(root_node, BQ_dict):
     
     # 3. Expand the expression
     sym_expr = expand(sym_expr)
-    print("expand sym_expr Result:", sym_expr)
+    # print("expand sym_expr Result:", sym_expr)
 
     # 4. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
     # Need to fix if we support multiple arrays.
   
     #print("before convert:", sym_expr)
     new_sym_expr = transform_expr(sym_expr)
-    # print("new_sym_expr:", new_sym_expr)
-    # sym_expr = sym_expr.replace(
-    #     lambda expr: expr.is_Pow and expr.base.name.startswith("arr_") and expr.exp.is_Integer,
-    #     lambda expr: Symbol(f"BQ_{int(expr.exp)}_of_{expr.base.name.split('_')[1]}")
-    # ).replace(
-    #     lambda expr: type(expr) == Symbol and expr.name.startswith("arr_"),
-    #     lambda expr: Symbol("BQ_1_of_" + expr.name.split('_')[1])
-    # )
     
-
     # print("DataItemToken replace Result:", sym_expr)
 
     converted_sym_expr = simplify(new_sym_expr)
@@ -76,14 +69,9 @@ def convert_with_bq(root_node, BQ_dict):
     bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
     for s in bq_symbols:
         BQ_dict[s.name] = 0
-    # if len(bq_symbols) != 0:
-    #     bq_max_x = max(int(s.name.split("_")[1]) for s in bq_symbols)
-    #     converted_node.bq_max = bq_max_x
-    # elif hasattr(converted_node, "bq_max"):
-    #     converted_node.bq_max = 0
 
     # print("BQ_dict:", BQ_dict)
-    converted_node.print()
+    
 
     return converted_node, BQ_dict
 
@@ -149,9 +137,7 @@ def sympy_to_BQ_node(expr):
 
     raise TypeError(f"Unsupported sympy expr type: {type(expr)} => {expr}")
 
-import re
-from sympy import Symbol, Pow, Mul
-from sympy.core.expr import Expr
+
 
 def extract_arr_info(expr: Expr):
     """
@@ -209,7 +195,7 @@ def transform_expr(expr: Expr) -> Expr:
                 # Always include the "pow" part.
                 num_str = f"{num_symbol}_pow_{num_exp}"
                 den_str = f"{den_symbol}_pow_{den_exp}"
-                return Mul(1/10, const_factor * Symbol(f'BQ_special_{num_str}_div_{den_str}'))
+                return Mul(1/len(global_arraylist[0]), const_factor * Symbol(f'BQ_special_{num_str}_div_{den_str}'))
         
         # If not a pure division, try to detect a two-factor multiplication.
         coeff, rest = expr.as_coeff_Mul()
@@ -222,7 +208,7 @@ def transform_expr(expr: Expr) -> Expr:
                 exp2 = info2[1] if info2[1] is not None else 1
                 a_str = f"{info1[0]}_pow_{exp1}"
                 b_str = f"{info2[0]}_pow_{exp2}"
-                return Mul(1/10, coeff * Symbol(f'BQ_special_{a_str}_mul_{b_str}'))
+                return Mul(1/len(global_arraylist[0]), coeff * Symbol(f'BQ_special_{a_str}_mul_{b_str}'))
         # Otherwise, recursively process each factor.
         new_args = [transform_expr(arg) for arg in expr.args]
         return Mul(*new_args)
@@ -235,7 +221,7 @@ def transform_expr(expr: Expr) -> Expr:
             match = re.fullmatch(r'arr_(\d+)', base.name)
             if match and exponent.is_Integer:
                 exp_val = exponent if exponent is not None else 1
-                return Mul(1/10 ,Symbol(f'BQ_{exp_val}_of_{match.group(1)}'))
+                return Mul(1/len(global_arraylist[0]) ,Symbol(f'BQ_{exp_val}_of_{match.group(1)}'))
         new_base = transform_expr(base)
         new_exponent = transform_expr(exponent)
         return new_base ** new_exponent
@@ -246,7 +232,7 @@ def transform_expr(expr: Expr) -> Expr:
         if expr.name.startswith("arr_"):
             match = re.fullmatch(r'arr_(\d+)', expr.name)
             if match:
-                return Mul(1/10, Symbol(f'BQ_1_of_{match.group(1)}'))
+                return Mul(1/len(global_arraylist[0]), Symbol(f'BQ_1_of_{match.group(1)}'))
     
     # Recursively process any sub-expressions.
     if expr.args:
