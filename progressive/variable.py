@@ -9,22 +9,16 @@ class Variable(Node):
         self.val = None
 
     def __iadd__(self, other):
-        self.expr = InplaceAddition(self.expr, other, in_loop=self.loop.cursor_in_loop)
-        self.modified = True
-        return self
+        raise ValueError("Inplace Operation is not supported")
 
     def __isub__(self, other):
-        self.expr = InplaceSubtraction(self.expr, other, in_loop=self.loop.cursor_in_loop)
-        self.modified = True
-        return self
+        raise ValueError("Inplace Operation is not supported")
 
     def __imul__(self, other):
-        self.expr = InplaceMultiplication(self.expr, other, in_loop=self.loop.cursor_in_loop)
-        return self
+        raise ValueError("Inplace Operation is not supported")
 
     def __itruediv__(self, other):
-        self.expr = InplaceDivision(self.expr, other, in_loop=self.loop.cursor_in_loop)
-        return self
+        raise ValueError("Inplace Operation is not supported")
 
     def print(self, level=0):
         print_tree(self.expr, level)

@@ -10,13 +10,11 @@ import time
 
 global_BQ_dict = {}
 def accum(expr):
-    bq_expr, _BQ_dict = convert_with_bq(expr, global_BQ_dict)
+    bq_expr, _ = convert_with_bq(expr, global_BQ_dict)
     return Multiplication(len(global_arraylist[0]), Variable(None, bq_expr))
 
 def each(i):
-    if type(i) is int:
-        return DataItemToken(global_arraylist[i], global_arraylist[i].id)
-    elif type(i) is Array:
+    if type(i) is Array:
         return DataItemToken(i, i.id)
     else:
         raise ValueError("Only array is supported.")
@@ -28,7 +26,7 @@ class Program:
 
         for array in global_arraylist:
             if len(array) != len(global_arraylist[0]):
-                raise ValueError("Arrays's lengths must be same")
+                raise ValueError("Array's lengths must be same")
         variables = self.args
         for var in variables:
             # var.print()
@@ -51,12 +49,6 @@ class Program:
         # for i, v in enumerate(variables, start=1):
         #     print(f"Variable {i}:")
         #     v.print()
-
-        # 2. find max BQ
-        max_bq = 0
-        for var in variables:
-            if hasattr(var.expr, "bq_max"):
-                max_bq = max(var.expr.bq_max, max_bq)
 
         
         iter_accum_duration = 0
@@ -93,20 +85,18 @@ class Program:
                         raise ValueError("Array not found")
                     BQ_dict[keys] = (BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
 
-            # print("BQ dict:", BQ_dict)
 
             eval_BQ_dict = {}
             for BQs in BQ_dict.keys():
                 eval_BQ_dict[BQs] = BQ_dict[BQs] * len(global_arraylist[0])
 
-            # print("Eval BQ dict:", eval_BQ_dict)
 
             for var in self.args:
                 result = evaluate(var, eval_BQ_dict, length = len(global_arraylist[0]))
                 var.val = result
-                time.sleep(0.3)
-
                 
+            time.sleep(0.0001)
+   
 
             iter_end = time.perf_counter()
 

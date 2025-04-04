@@ -13,10 +13,7 @@ class Array:
         Array._id += 1
 
     
-    def __getitem__(self, index):
-        if index is not SpecialToken.LOOP_INDEX:
-            raise ValueError("Only loop index is supported.")
-        
+    def __getitem__(self, index):   
         return DataItemToken(self, self.id)
 
     def __len__(self):        

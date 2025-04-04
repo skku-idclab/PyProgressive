@@ -6,9 +6,7 @@ from sympy.core.expr import Expr
 from .sympy_transform import node_to_string, token_map
 from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
-    Multiplication, Division, PowerN,
-    InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
-    InplaceMultiplication, InplaceDivision, BQ
+    Multiplication, Division, PowerN, BQ
 )
 from .variable import Variable
 from .token import DataItemToken
@@ -39,7 +37,6 @@ def convert_with_bq(root_node, BQ_dict):
     
     # 1. Convert Node → string → sympy expression
     expr_str = node_to_string(root_node)
-    # print("expr_str:", expr_str)
     try:
         sym_expr = sympify(expr_str)
     except Exception as e:
@@ -47,31 +44,23 @@ def convert_with_bq(root_node, BQ_dict):
 
     
     
-    # 3. Expand the expression
+    # 2. Expand the expression
     sym_expr = expand(sym_expr)
-    # print("expand sym_expr Result:", sym_expr)
 
-    # 4. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
-    # Need to fix if we support multiple arrays.
-  
-    #print("before convert:", sym_expr)
+
+    # 3. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
+
     new_sym_expr = transform_expr(sym_expr)
-    
-    # print("DataItemToken replace Result:", sym_expr)
 
     converted_sym_expr = simplify(new_sym_expr)
 
-    #print("convert Result:", converted_sym_expr)
-
-    # 5. Finally, convert the resulting sympy expression back to our Node structure and return it
+    # 4. Finally, convert the resulting sympy expression back to our Node structure and return it
     converted_node = sympy_to_BQ_node(converted_sym_expr)
 
     bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
     for s in bq_symbols:
         BQ_dict[s.name] = 0
 
-    # print("BQ_dict:", BQ_dict)
-    
 
     return converted_node, BQ_dict
 

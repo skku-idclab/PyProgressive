@@ -49,27 +49,13 @@ def node_to_string(node):
         elif isinstance(node, Division):
             return f"({left_str} / {right_str})"
 
-    # 4) InplaceOperationNode (InplaceAddition, etc.)
-    if isinstance(node, InplaceOperationNode):
-        left_str = node_to_string(node.left)
-        right_str = node_to_string(node.right)
-        # No in-place scheme in Sympy, simply convert to normal operation
-        if isinstance(node, InplaceAddition):
-            return f"({left_str} + {right_str})"
-        elif isinstance(node, InplaceSubtraction):
-            return f"({left_str} - {right_str})"
-        elif isinstance(node, InplaceMultiplication):
-            return f"({left_str} * {right_str})"
-        elif isinstance(node, InplaceDivision):
-            return f"({left_str} / {right_str})"
-
-    # 5) PowerN
+    # 4) PowerN
     if isinstance(node, PowerN):
         base_str = node_to_string(node.base)
         exp_str = node_to_string(node.exponent)
         return f"({base_str} ** {exp_str})"
 
-    # 7) BQ
+    # 5) BQ
     if isinstance(node, BQ):
         return node.name
     
