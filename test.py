@@ -14,11 +14,9 @@ if __name__ == "__main__":
     intercept = mean2 - slope * mean1
 
     def my_callback(slope, intercept):
-        variable = accum((1 - slope) ** 2) - intercept
-        compiled2 = pp.progressify(variable)
-        compiled2.run(interval=0.1, callback = lambda variable: print(variable))
+        print(f"Slope: {slope}, Intercept: {intercept}")
 
 
     compiled = pp.progressify(slope, intercept)
-    compiled.run(interval=0.001, callback = my_callback)
+    compiled.run(interval=0.0001, callback = my_callback)
 

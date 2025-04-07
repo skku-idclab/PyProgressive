@@ -8,7 +8,7 @@ from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
-    InplaceMultiplication, InplaceDivision, BQ
+    InplaceMultiplication, InplaceDivision, BQ, GroupBy
 )
 from .variable import Variable
 from .token import DataItemToken
@@ -59,6 +59,12 @@ def node_to_string(node):
     if isinstance(node, BQ):
         return node.name
     
+    # 6) GroupBy
+    # GroupBy is a special case, we need to handle it separately
+    if isinstance(node, GroupBy):
+        group_index_str = node_to_string(node.group_index)
+        expr_str = node_to_string(node.expr)
+        return f"GroupBy({group_index_str}, {expr_str})"
 
 
     raise TypeError(f"Unsupported node type in node_to_string: {type(node)}")
@@ -80,9 +86,30 @@ def sympy_to_node(expr):
             bqnum = name.split("_")[1]
             bqarridx = name.split("_")[3]
             return BQ(bqnum, bqarridx, name)
+        
+        if name.startswith("GroupBy_"):
+            group_index = name.split("_")[1]
+            expr = name.split("_")[2]
+            expr = sympy_to_node(expr)
+            return GroupBy(group_index, expr)
+        
+        print("Warning: Unrecognized symbol name:", name)
 
         # others considered as Variable(None, 0). will be modified later
         return Variable(None, 0)
+    
+    if isinstance(expr, sympy.Function):
+        # Handle unknown functions as a placeholder
+        name = str(expr)
+        print("name:", name)
+        if name.startswith("GroupBy"):
+            group_index = name.split("(")[1].split(",")[0]
+            group_index = group_index.strip()
+            group_index = int(group_index)
+            expr = name.split(",")[1].split(")")[0]
+            expr = expr.strip()
+            return GroupBy(group_index, expr)
+        raise ValueError(f"Unknown function: {name}")
 
     if isinstance(expr, sympy.Integer):
         return int(expr)
@@ -121,6 +148,7 @@ def sympy_to_node(expr):
     
     if isinstance(expr, int):
         return expr
+    
 
     raise TypeError(f"Unsupported sympy expr type: {type(expr)} => {expr}")
 
@@ -133,10 +161,10 @@ def flatten_with_sympy(root_node):
     4) sympy -> Node
     """
     expr_str = node_to_string(root_node)
-    # print(f"node to string result: {expr_str}")
+    print(f"node to string result: {expr_str}")
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
-    # print(f"expanded expr: {expanded_expr}")
+    print(f"expanded expr: {expanded_expr}")
     new_root_node = sympy_to_node(expanded_expr)
     return new_root_node
 

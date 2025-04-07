@@ -1,6 +1,6 @@
 from .token import SpecialToken
 from .variable import Variable
-from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision
+from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision, BQ, GroupBy
 from .token import DataItemToken
 from .array import Array, global_arraylist
 from .bq_converter import convert_with_bq
@@ -13,11 +13,39 @@ def accum(expr):
     bq_expr, _ = convert_with_bq(expr, global_BQ_dict)
     return Multiplication(len(global_arraylist[0]), Variable(None, bq_expr))
 
-def each(i):
-    if type(i) is Array:
-        return DataItemToken(i, i.id)
+def each(*args):
+    if len(args) == 1:
+        i = args[0]
+        if isinstance(i, Array):
+            return DataItemToken(i, i.id)
+        else:
+            raise ValueError("Only array is supported.")
+        
+    elif len(args) == 2:
+        d, index = args
+        if isinstance(d, Array):
+            types_in_list = set(type(x) for x in d.data)
+            if len(types_in_list) != 1:
+                raise ValueError("Array must be homogeneous")
+            if types_in_list == {tuple}:
+                return DataItemToken(d, d.id, index)
+            else:
+                raise ValueError("Array must consist of tuples if there is an index")
+        else:
+            raise ValueError("Only array is supported.")
     else:
-        raise ValueError("Only array is supported.")
+        raise TypeError("Invalid number of arguments to 'each'")
+    
+
+def group_by(group_index, expr):
+    if isinstance(group_index, DataItemToken):
+        if group_index.index == -1:
+            raise ValueError("Index is not specified")
+        group_index = group_index.index
+        return GroupBy(group_index, expr)
+    else:
+        raise ValueError("group_index must be DataItemToken")
+
 
 class Program:
     def __init__(self, *args):
@@ -29,13 +57,16 @@ class Program:
                 raise ValueError("Array's lengths must be same")
         variables = self.args
         for var in variables:
-            # var.print()
-            var.expr = flatten_with_sympy(var)
+            if isinstance(var, GroupBy):
+                var = flatten_with_sympy(var)
+            else:
+                var.print()
+                var.expr = flatten_with_sympy(var)
 
-        # print("=== After Flatten with Sympy ===")
-        # for i, v in enumerate(variables, start=1):
-        #     print(f"Variable {i}:")
-        #     #v.print()
+        print("=== After Flatten with Sympy ===")
+        for i, v in enumerate(variables, start=1):
+            print(f"Variable {i}:")
+            v.print()
        
 
         BQ_dict = {}
@@ -110,5 +141,4 @@ class Program:
 
 
 def progressify(*args):
-
     return Program(*args)

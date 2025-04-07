@@ -6,7 +6,7 @@ from sympy.core.expr import Expr
 from .sympy_transform import node_to_string, token_map
 from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
-    Multiplication, Division, PowerN, BQ
+    Multiplication, Division, PowerN, BQ, GroupBy
 )
 from .variable import Variable
 from .token import DataItemToken
@@ -85,6 +85,18 @@ def sympy_to_BQ_node(expr):
 
         # Otherwise, temporarily handle as Variable(None, 0), needs revision later
         return Variable(None, 0)
+    
+    if isinstance(expr, sympy.Function):
+        # Handle unknown functions as a placeholder
+        name = str(expr)
+        if name.startswith("GroupBy"):
+            group_index = name.split("(")[1].split(",")[0]
+            group_index = group_index.strip()
+            group_index = int(group_index)
+            expr = name.split(",")[1].split(")")[0]
+            expr = expr.strip()
+            return GroupBy(group_index, expr)
+        raise ValueError(f"Unknown function: {name}")
 
     if isinstance(expr, sympy.Integer):
         return int(expr)

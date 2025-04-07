@@ -101,6 +101,26 @@ class BQ(Node):
     def __str__(self):
         return self.name
 
+class GroupBy(Node):
+    def __init__(self, group_index, expr):
+        self.group_index = group_index
+        self.expr = expr
+
+    def __str__(self):
+        return f"GroupBy_{self.group_index}"
+
+    def __iadd__(self, other):
+        raise ValueError("Inplace Operation is not supported")
+
+    def __isub__(self, other):
+        raise ValueError("Inplace Operation is not supported")
+
+    def __imul__(self, other):
+        raise ValueError("Inplace Operation is not supported")
+
+    def __itruediv__(self, other):
+        raise ValueError("Inplace Operation is not supported")
+
 
 def print_tree(node, level=0):
     """
@@ -128,5 +148,7 @@ def print_tree(node, level=0):
         print_tree(node.exponent, level + 1)
     elif isinstance(node, BQ):
         pass
+    elif isinstance(node, GroupBy):
+        print_tree(node.expr, level + 1)
     elif isinstance(node, Node):
         node.print(level + 1)

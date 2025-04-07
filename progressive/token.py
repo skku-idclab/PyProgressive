@@ -8,9 +8,10 @@ class SpecialToken(Enum):
 # d[i]
 
 class DataItemToken():
-    def __init__(self, array, id):
+    def __init__(self, array, id, index = -1):
         self.array = array
         self.id = id
+        self.index = index # this is for tuple array
 
     def __str__(self):
         return "d[i]_"+str(self.id)
