@@ -1,17 +1,18 @@
 from .token import SpecialToken
 from .variable import Variable
 from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision, BQ, GroupBy
-from .token import DataItemToken
+from .token import DataItemToken, DataLengthToken
 from .array import Array, global_arraylist
 from .bq_converter import convert_with_bq
 from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
+from .groupby import group_by_evaluator
 import time
 
 global_BQ_dict = {}
 def accum(expr):
     bq_expr, _ = convert_with_bq(expr, global_BQ_dict)
-    return Multiplication(len(global_arraylist[0]), Variable(None, bq_expr))
+    return Multiplication(DataLengthToken(value = len(global_arraylist[0])), Variable(None, bq_expr))
 
 def each(*args):
     if len(args) == 1:
@@ -37,12 +38,13 @@ def each(*args):
         raise TypeError("Invalid number of arguments to 'each'")
     
 
-def group_by(group_index, expr):
-    if isinstance(group_index, DataItemToken):
-        if group_index.index == -1:
+def group(group_index_item, expr):
+    if isinstance(group_index_item, DataItemToken):
+        if group_index_item.index == -1:
             raise ValueError("Index is not specified")
-        group_index = group_index.index
-        return GroupBy(group_index, expr)
+        group_index = group_index_item.index
+        group_arrayid = group_index_item.id
+        return GroupBy(group_index, group_arrayid, expr)
     else:
         raise ValueError("group_index must be DataItemToken")
 
@@ -76,16 +78,30 @@ class Program:
         for var in variables:
             var, BQ_dict = convert_with_bq(var, BQ_dict)
         
-        # print("=== After BQ Conversion ===")
-        # for i, v in enumerate(variables, start=1):
-        #     print(f"Variable {i}:")
-        #     v.print()
+        print("=== After BQ Conversion ===")
+        for i, v in enumerate(variables, start=1):
+            print(f"Variable {i}:")
+            v.print()
 
-        
+        #groupby handling
+        # for var in variables:
+        #     if isinstance(var, GroupBy):
+        #         var, BQ_dict = group_by_converter(var.expr, BQ_dict)
+
+
+        #evaluate
         iter_accum_duration = 0
         for idx in range(0, len(global_arraylist[0])):
             iter_start = time.perf_counter()
+
+            for var in variables:
+                if isinstance(var, GroupBy):
+                    group_index = var.group_index
+                    array_index = var.array_index
+                    var, BQ_dict = group_by_evaluator(var, BQ_dict, idx)
             for keys in BQ_dict.keys():
+                if keys.split("_")[1] == "group":
+                    pass
                 if keys.split("_")[1] == "special":
                     arr1id, pow1 = keys.split("_")[2], keys.split("_")[4]
                     arr2id, pow2 = keys.split("_")[6], keys.split("_")[8]
@@ -117,13 +133,9 @@ class Program:
                     BQ_dict[keys] = (BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
 
 
-            eval_BQ_dict = {}
-            for BQs in BQ_dict.keys():
-                eval_BQ_dict[BQs] = BQ_dict[BQs] * len(global_arraylist[0])
-
 
             for var in self.args:
-                result = evaluate(var, eval_BQ_dict, length = len(global_arraylist[0]))
+                result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))
                 var.val = result
                 
             time.sleep(0.0001)
@@ -140,5 +152,5 @@ class Program:
 
 
 
-def progressify(*args):
+def compile(*args):
     return Program(*args)

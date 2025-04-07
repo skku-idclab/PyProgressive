@@ -17,6 +17,6 @@ if __name__ == "__main__":
         print(f"Slope: {slope}, Intercept: {intercept}")
 
 
-    compiled = pp.progressify(slope, intercept)
+    compiled = pp.compile(slope, intercept)
     compiled.run(interval=0.0001, callback = my_callback)
 

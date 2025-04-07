@@ -18,5 +18,7 @@ class Array:
 
     def __len__(self):        
         return self.length #DataLengthToken(self)
-
+    
+    def __str__(self):
+        return "Array_" + str(self.id)
  

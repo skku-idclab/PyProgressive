@@ -11,7 +11,7 @@ from .expression import (
     InplaceMultiplication, InplaceDivision, BQ, GroupBy
 )
 from .variable import Variable
-from .token import DataItemToken
+from .token import DataItemToken, DataLengthToken
 
 
 token_map = {}
@@ -32,6 +32,11 @@ def node_to_string(node):
         symbol_name = "arr_" + str(node.id)
         token_map[symbol_name] = node
         return symbol_name  # ex: array[i] -> arr_123
+    
+    if isinstance(node, DataLengthToken):
+        #symbol_name = f"arr_{id(node.array)}"
+        return "DataLength"
+
     if isinstance(node, Variable):
         # Convert expr (in Variable) to string
         return f"({node_to_string(node.expr)})"
@@ -64,7 +69,8 @@ def node_to_string(node):
     if isinstance(node, GroupBy):
         group_index_str = node_to_string(node.group_index)
         expr_str = node_to_string(node.expr)
-        return f"GroupBy({group_index_str}, {expr_str})"
+        array_index = node.array_index
+        return f"GroupBy({group_index_str}, {array_index}, {expr_str})"
 
 
     raise TypeError(f"Unsupported node type in node_to_string: {type(node)}")
@@ -106,9 +112,11 @@ def sympy_to_node(expr):
             group_index = name.split("(")[1].split(",")[0]
             group_index = group_index.strip()
             group_index = int(group_index)
+            array_index = name.split(",")[1]
+            array_index = array_index.strip()
             expr = name.split(",")[1].split(")")[0]
             expr = expr.strip()
-            return GroupBy(group_index, expr)
+            return GroupBy(group_index, array_index, expr)
         raise ValueError(f"Unknown function: {name}")
 
     if isinstance(expr, sympy.Integer):

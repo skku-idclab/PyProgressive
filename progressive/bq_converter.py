@@ -93,9 +93,11 @@ def sympy_to_BQ_node(expr):
             group_index = name.split("(")[1].split(",")[0]
             group_index = group_index.strip()
             group_index = int(group_index)
+            array_index = name.split(",")[1]
+            array_index = array_index.strip()
             expr = name.split(",")[1].split(")")[0]
             expr = expr.strip()
-            return GroupBy(group_index, expr)
+            return GroupBy(group_index, array_index, expr)
         raise ValueError(f"Unknown function: {name}")
 
     if isinstance(expr, sympy.Integer):
@@ -196,7 +198,7 @@ def transform_expr(expr: Expr) -> Expr:
                 # Always include the "pow" part.
                 num_str = f"{num_symbol}_pow_{num_exp}"
                 den_str = f"{den_symbol}_pow_{den_exp}"
-                return Mul(1/len(global_arraylist[0]), const_factor * Symbol(f'BQ_special_{num_str}_div_{den_str}'))
+                return Mul(1, const_factor * Symbol(f'BQ_special_{num_str}_div_{den_str}'))
         
         # If not a pure division, try to detect a two-factor multiplication.
         coeff, rest = expr.as_coeff_Mul()
@@ -209,7 +211,7 @@ def transform_expr(expr: Expr) -> Expr:
                 exp2 = info2[1] if info2[1] is not None else 1
                 a_str = f"{info1[0]}_pow_{exp1}"
                 b_str = f"{info2[0]}_pow_{exp2}"
-                return Mul(1/len(global_arraylist[0]), coeff * Symbol(f'BQ_special_{a_str}_mul_{b_str}'))
+                return Mul(1, coeff * Symbol(f'BQ_special_{a_str}_mul_{b_str}'))
         # Otherwise, recursively process each factor.
         new_args = [transform_expr(arg) for arg in expr.args]
         return Mul(*new_args)
@@ -222,7 +224,7 @@ def transform_expr(expr: Expr) -> Expr:
             match = re.fullmatch(r'arr_(\d+)', base.name)
             if match and exponent.is_Integer:
                 exp_val = exponent if exponent is not None else 1
-                return Mul(1/len(global_arraylist[0]) ,Symbol(f'BQ_{exp_val}_of_{match.group(1)}'))
+                return Mul(1 ,Symbol(f'BQ_{exp_val}_of_{match.group(1)}'))
         new_base = transform_expr(base)
         new_exponent = transform_expr(exponent)
         return new_base ** new_exponent
@@ -233,7 +235,7 @@ def transform_expr(expr: Expr) -> Expr:
         if expr.name.startswith("arr_"):
             match = re.fullmatch(r'arr_(\d+)', expr.name)
             if match:
-                return Mul(1/len(global_arraylist[0]), Symbol(f'BQ_1_of_{match.group(1)}'))
+                return Mul(1, Symbol(f'BQ_1_of_{match.group(1)}'))
     
     # Recursively process any sub-expressions.
     if expr.args:

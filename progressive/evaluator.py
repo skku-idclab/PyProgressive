@@ -1,6 +1,6 @@
 from progressive.expression import Addition, Subtraction, Multiplication, Division, PowerN
 from progressive.variable import Variable
-
+from progressive.token import DataLengthToken
 def evaluate(node, bq_values, length = None):
     """
     Evaluates the given computation tree (node) and returns the final value.
@@ -25,6 +25,9 @@ def evaluate(node, bq_values, length = None):
     # If it's a basic numeric type, return it directly
     if isinstance(node, (int, float)):
         return node
+    
+    if isinstance(node, DataLengthToken):
+        return node.value
 
     # Convert to string and check if it's a BQ_x node (usually "BQ_1", "BQ_2", etc.)
     node_str = str(node)
@@ -56,6 +59,7 @@ def evaluate(node, bq_values, length = None):
     # If the node provides a value() method, use it to evaluate
     if hasattr(node, "value") and callable(node.value):
         return node.value()
+    
 
     # If the node type is not supported, raise an error
     raise TypeError(f"Unsupported node type: {node}")
