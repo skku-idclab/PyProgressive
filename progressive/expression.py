@@ -106,6 +106,7 @@ class GroupBy(Node):
         self.group_index = group_index
         self.array_index = array_index
         self.expr = expr
+        self.val = 0
 
     def __str__(self):
         return f"GroupBy_{self.group_index}"
