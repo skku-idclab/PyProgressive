@@ -6,7 +6,7 @@ from .array import Array, global_arraylist
 from .bq_converter import convert_with_bq
 from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
-from .groupby import group_by_bq_evaluator
+from .groupby import group_by_bq_update, group_evaluator
 import time
 
 global_BQ_dict = {}
@@ -62,13 +62,13 @@ class Program:
             if isinstance(var, GroupBy):
                 var = flatten_with_sympy(var)
             else:
-                var.print()
+                # var.print()
                 var.expr = flatten_with_sympy(var)
 
-        print("=== After Flatten with Sympy ===")
-        for i, v in enumerate(variables, start=1):
-            print(f"Variable {i}:")
-            v.print()
+        # print("=== After Flatten with Sympy ===")
+        # for i, v in enumerate(variables, start=1):
+        #     print(f"Variable {i}:")
+        #     v.print()
        
 
         BQ_dict = {}
@@ -79,10 +79,10 @@ class Program:
         for var in variables:
             var, BQ_dict = convert_with_bq(var, BQ_dict)
         
-        print("=== After BQ Conversion ===")
-        for i, v in enumerate(variables, start=1):
-            print(f"Variable {i}:")
-            v.print()
+        # print("=== After BQ Conversion ===")
+        # for i, v in enumerate(variables, start=1):
+        #     print(f"Variable {i}:")
+        #     v.print()
 
         #groupby handling
         # for var in variables:
@@ -138,24 +138,30 @@ class Program:
                         BQ_dict[keys] = (BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
 
 
+            results = []
 
             for var in self.args:
                 if isinstance(var, GroupBy):
                     group_index = var.group_index
                     array_index = var.array_index
-                    var, BQ_group_dict = group_by_bq_evaluator(var, BQ_group_dict, idx)
-                result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))
-                var.val = result
-                
+                    var, BQ_group_dict = group_by_bq_update(var, BQ_group_dict, idx)
+                    var.val = group_evaluator(var, BQ_group_dict)
+                    results.append(var.val)
+                else:
+                    result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))
+                    var.val = result
+                    results.append(result)
+            
             time.sleep(0.0001)
    
 
             iter_end = time.perf_counter()
 
+
             iter_accum_duration += iter_end - iter_start
             if iter_accum_duration > interval:
-                args_val = [arg.val for arg in self.args]
-                callback(*args_val)
+                #args_val = [arg.val for arg in self.args]
+                callback(*results)
                 iter_accum_duration -= interval
 
 

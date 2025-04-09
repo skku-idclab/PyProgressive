@@ -99,6 +99,9 @@ def sympy_to_node(expr):
             expr = sympy_to_node(expr)
             return GroupBy(group_index, expr)
         
+        if name.startswith("DataLength"):
+            return DataLengthToken()
+        
         print("Warning: Unrecognized symbol name:", name)
 
         # others considered as Variable(None, 0). will be modified later
@@ -107,7 +110,6 @@ def sympy_to_node(expr):
     if isinstance(expr, sympy.Function):
         # Handle unknown functions as a placeholder
         name = str(expr)
-        print("name:", name)
         if name.startswith("GroupBy"):
             group_index = name.split("(")[1].split(",")[0]
             group_index = group_index.strip()
@@ -169,10 +171,10 @@ def flatten_with_sympy(root_node):
     4) sympy -> Node
     """
     expr_str = node_to_string(root_node)
-    print(f"node to string result: {expr_str}")
+    # print(f"node to string result: {expr_str}")
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
-    print(f"expanded expr: {expanded_expr}")
+    # print(f"expanded expr: {expanded_expr}")
     new_root_node = sympy_to_node(expanded_expr)
     return new_root_node
 

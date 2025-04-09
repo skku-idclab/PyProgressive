@@ -102,11 +102,13 @@ class BQ(Node):
         return self.name
 
 class GroupBy(Node):
-    def __init__(self, group_index, array_index, expr):
+    def __init__(self, group_index, array_index, expr, group_BQ_dict=None):
         self.group_index = group_index
         self.array_index = array_index
+        self.group_length_dict = {}
+        self.group_BQ_dict = {}
         self.expr = expr
-        self.val = 0
+        self.val = None
 
     def __str__(self):
         return f"GroupBy_{self.group_index}"
