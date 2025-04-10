@@ -1,4 +1,5 @@
 from .expression import Node, GroupBy, InplaceOperationNode, BinaryOperationNode, BQ, Addition, Subtraction, Multiplication, Division, PowerN
+from .variable import Variable
 from .bq_converter import convert_with_bq
 from .array import Array, global_arraylist
 from .token import DataItemToken, DataLengthToken
@@ -14,6 +15,7 @@ def group_by_bq_update(expr, BQ_dict, idx):
         BQ_str_dict = {}
         BQ_group_dict = {}
         _, BQ_str_dict = convert_with_bq(expr.expr, BQ_str_dict)
+
         
 
         for key in BQ_str_dict.keys():
@@ -59,9 +61,11 @@ def group_by_bq_update(expr, BQ_dict, idx):
     else:
         raise ValueError("Invalid expression for group_by_converter")
 
-def group_evaluator(var, BQ_group_dict, category = None, length = None):
+def group_evaluator(var, BQ_group_dict, category = None, index = None):
     node = var
     if isinstance(node, GroupBy):
+        print("BQ_group_dict:", BQ_group_dict)
+        node.print()
         categoryies = set()
         category_values = {}
         for key in BQ_group_dict.keys():
@@ -71,6 +75,9 @@ def group_evaluator(var, BQ_group_dict, category = None, length = None):
         # print("categoryies:", categoryies)
         for target_category in categoryies:
             category_values[target_category] = group_evaluator(node.expr, BQ_group_dict, category = target_category)
+            category_values[target_category] = category_values[target_category]
+    
+
         node.val = category_values
         return category_values
 
@@ -85,7 +92,7 @@ def group_evaluator(var, BQ_group_dict, category = None, length = None):
         # print("BQ_group_dict:", BQ_group_dict)
         if target not in BQ_group_dict:
             raise ValueError("Array not found")
-        return BQ_group_dict[target]
+        return BQ_group_dict[target]* len(global_arraylist[0])
 
     # Convert to string and check if it's a BQ_x node (usually "BQ_1", "BQ_2", etc.)
     node_str = str(node)
@@ -111,7 +118,12 @@ def group_evaluator(var, BQ_group_dict, category = None, length = None):
     # PowerN
     elif isinstance(node, PowerN):
         return group_evaluator(node.base, BQ_group_dict, category) ** group_evaluator(node.exponent, BQ_group_dict, category)
-
+    
+    # if isinstance(node, Variable):
+    #     if node.value() == None:
+    #         return group_evaluator(node.expr, BQ_group_dict, category)
+    #     else:
+    #         return node.value()
     # If the node has an 'expr' attribute, evaluate that (e.g., Variable node)
     if hasattr(node, "expr"):
         return group_evaluator(node.expr, BQ_group_dict, category)
