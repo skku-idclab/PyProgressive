@@ -8,10 +8,10 @@ from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN,
     InplaceOperationNode, InplaceAddition, InplaceSubtraction, 
-    InplaceMultiplication, InplaceDivision, BQ, GroupBy
+    InplaceMultiplication, InplaceDivision, BQ, GroupBy, GBQ
 )
 from .variable import Variable
-from .token import DataItemToken, DataLengthToken
+from .token import DataItemToken, DataLengthToken, GToken
 from .array import global_arraylist
 
 token_map = {}
@@ -29,6 +29,7 @@ def node_to_string(node):
     # 2) Token or Variable?
     if isinstance(node, DataItemToken):
         #symbol_name = f"arr_{id(node.array)}"
+
         symbol_name = "arr_" + str(node.id)
         token_map[symbol_name] = node
         return symbol_name  # ex: array[i] -> arr_123
@@ -64,6 +65,9 @@ def node_to_string(node):
     if isinstance(node, BQ):
         return node.name
     
+    if isinstance(node, GBQ):
+        return node.name
+    
     # 6) GroupBy
     # GroupBy is a special case, we need to handle it separately
     if isinstance(node, GroupBy):
@@ -71,6 +75,9 @@ def node_to_string(node):
         expr_str = node_to_string(node.expr)
         array_index = node.array_index
         return f"GroupBy({group_index_str}, {array_index}, {expr_str})"
+    
+    if isinstance(node, GToken):
+        return "arr_GToken"
 
 
     raise TypeError(f"Unsupported node type in node_to_string: {type(node)}")
@@ -102,7 +109,11 @@ def sympy_to_node(expr):
         if name.startswith("DataLength"):
             return DataLengthToken(value = len(global_arraylist[0]))
         
+        if name.startswith("GToken"):
+            return GToken(access_index = name.split("_")[1])
+        
         print("Warning: Unrecognized symbol name:", name)
+        print("in sympytonode")
 
         # others considered as Variable(None, 0). will be modified later
         return Variable(None, 0)

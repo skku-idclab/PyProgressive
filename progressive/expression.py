@@ -100,6 +100,16 @@ class BQ(Node):
 
     def __str__(self):
         return self.name
+    
+class GBQ(Node):
+    def __init__(self, k, arridx, access_index, name):
+        self.k = k
+        self.arridx = arridx
+        self.access_index = access_index
+        self.name = name
+
+    def __str__(self):
+        return self.name
 
 class GroupBy(Node):
     def __init__(self, group_index, array_index, expr, group_BQ_dict=None):
@@ -151,6 +161,8 @@ def print_tree(node, level=0):
         print_tree(node.base, level + 1)
         print_tree(node.exponent, level + 1)
     elif isinstance(node, BQ):
+        pass
+    elif isinstance(node, GBQ):
         pass
     elif isinstance(node, GroupBy):
         print_tree(node.expr, level + 1)

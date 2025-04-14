@@ -1,19 +1,25 @@
 from .token import SpecialToken
 from .variable import Variable
 from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision, BQ, GroupBy
-from .token import DataItemToken, DataLengthToken
+from .token import DataItemToken, DataLengthToken, GToken
 from .array import Array, global_arraylist
 from .bq_converter import convert_with_bq
+from .group_bq_converter import group_convert_with_bq
 from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
 from .groupby import group_by_bq_update, group_evaluator
 import time
 
 global_BQ_dict = {}
+
+
+
+G = GToken()
+
 def accum(expr):
-    # print("=== Before Flatten with bq converter ===")
-    # if hasattr(expr, 'print'):
-    #     expr.print()
+    print("=== Before Flatten with bq converter ===")
+    if hasattr(expr, 'print'):
+        expr.print()
     bq_expr, _ = convert_with_bq(expr, global_BQ_dict)
     
     # print("=== After Flatten with bq converter ===")
@@ -38,6 +44,11 @@ def each(*args):
                 return DataItemToken(d, d.id, index)
             else:
                 raise ValueError("Array must consist of tuples if there is an index")
+        elif isinstance(d, GToken):
+            if isinstance(index, int):
+                return DataItemToken(d, "GToken", index)
+            else:
+                raise ValueError("Index must be int")
         else:
             raise ValueError("Only array is supported.")
     else:
@@ -84,12 +95,17 @@ class Program:
         # compile
         # 1. convert to BQ & find BQ that need to calculate(update BQ_dict)
         for var in variables:
-            var, BQ_dict = convert_with_bq(var, BQ_dict)
+            print("=== Before BQ Conversion ===")
+            var.print()
+            if isinstance(var, GroupBy):
+                var.expr, BQ_group_dict = group_convert_with_bq(var.expr, BQ_group_dict)
+            else:  
+                var, BQ_dict = convert_with_bq(var, BQ_dict)
         
-        # print("=== After BQ Conversion ===")
-        # for i, v in enumerate(variables, start=1):
-        #     print(f"Variable {i}:")
-        #     v.print()
+        print("=== After BQ Conversion ===")
+        for i, v in enumerate(variables, start=1):
+            print(f"Variable {i}:")
+            v.print()
 
         #groupby handling
         # for var in variables:

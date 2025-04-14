@@ -64,3 +64,10 @@ class DataLengthToken():
         self.value = value 
     def __str__(self):
         return "LengthToken"
+    
+
+class GToken: # Token for GroupBy
+    def __init__(self, access_index = None):
+        self.access_index = access_index
+    def __str__(self):
+        return f"GToken_{self.access_index}"
