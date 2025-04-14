@@ -12,7 +12,7 @@ from .expression import (
 )
 from .variable import Variable
 from .token import DataItemToken, DataLengthToken
-
+from .array import global_arraylist
 
 token_map = {}
 def node_to_string(node):
@@ -97,10 +97,10 @@ def sympy_to_node(expr):
             group_index = name.split("_")[1]
             expr = name.split("_")[2]
             expr = sympy_to_node(expr)
-            return GroupBy(group_index, expr)
+            return GroupBy(group_index, 0, expr)
         
         if name.startswith("DataLength"):
-            return DataLengthToken()
+            return DataLengthToken(value = len(global_arraylist[0]))
         
         print("Warning: Unrecognized symbol name:", name)
 
@@ -170,12 +170,16 @@ def flatten_with_sympy(root_node):
     3) sympy.expand
     4) sympy -> Node
     """
+    # print("rootnode:")
+    # root_node.print()
     expr_str = node_to_string(root_node)
-    # print(f"node to string result: {expr_str}")
+    print(f"node to string result: {expr_str}")
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
-    # print(f"expanded expr: {expanded_expr}")
+    print(f"expanded expr: {expanded_expr}")
     new_root_node = sympy_to_node(expanded_expr)
+    # print("new root node:")
+    # new_root_node.print()
     return new_root_node
 
 

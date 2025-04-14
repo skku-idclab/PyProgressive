@@ -65,7 +65,7 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None):
     node = var
     if isinstance(node, GroupBy):
         print("BQ_group_dict:", BQ_group_dict)
-        node.print()
+        #node.print()
         categoryies = set()
         category_values = {}
         for key in BQ_group_dict.keys():
@@ -135,4 +135,3 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None):
 
     # If the node type is not supported, raise an error
     raise TypeError(f"Unsupported node type: {node}")
-    pass

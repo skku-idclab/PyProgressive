@@ -11,8 +11,14 @@ import time
 
 global_BQ_dict = {}
 def accum(expr):
+    # print("=== Before Flatten with bq converter ===")
+    # if hasattr(expr, 'print'):
+    #     expr.print()
     bq_expr, _ = convert_with_bq(expr, global_BQ_dict)
-    return Multiplication(DataLengthToken(value = len(global_arraylist[0])), Variable(None, bq_expr))
+    
+    # print("=== After Flatten with bq converter ===")
+    # bq_expr.print()
+    return Multiplication(DataLengthToken(value = len(global_arraylist[0])), Variable(None, bq_expr)) 
 
 def each(*args):
     if len(args) == 1:
@@ -62,6 +68,7 @@ class Program:
             if isinstance(var, GroupBy):
                 var = flatten_with_sympy(var)
             else:
+                # print("=== Before Flatten with Sympy ===")
                 # var.print()
                 var.expr = flatten_with_sympy(var)
 

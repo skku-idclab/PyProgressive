@@ -8,8 +8,8 @@ if __name__ == "__main__":
     wholesum = accum(each(array0, 1))
     var = group(each(array0, 0), accum(each(array0, 1)))
 
-    compiled = pp.compile(wholesum)
-    compiled.run(interval = 0, callback = lambda var: print(var))
+    compiled = pp.compile(wholesum, var)
+    compiled.run(interval = 0, callback = lambda wholesum, var: print(wholesum, var))
 
 #TODO: array index handling in datalength
 #TODO: each index handling for category and data

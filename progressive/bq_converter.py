@@ -9,7 +9,7 @@ from .expression import (
     Multiplication, Division, PowerN, BQ, GroupBy
 )
 from .variable import Variable
-from .token import DataItemToken
+from .token import DataItemToken, DataLengthToken
 from .array import global_arraylist
 
 import re
@@ -82,6 +82,12 @@ def sympy_to_BQ_node(expr):
             bqnum = name.split("_")[1]
             bqarridx = name.split("_")[3]
             return BQ(bqnum, bqarridx, name)
+        
+        if name.startswith("DataLength"):
+            # DataLengthToken is handled in the sympy_to_node function
+            return DataLengthToken(value = len(global_arraylist[0]))
+        
+        print("Warning: Unrecognized symbol name:", name)
 
         # Otherwise, temporarily handle as Variable(None, 0), needs revision later
         return Variable(None, 0)

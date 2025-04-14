@@ -61,6 +61,6 @@ class DataLengthToken():
     def __init__(self, array = None, value = None):
         self.array = array
         self.arrayid = 0 #array.id if array is not None else None
-        self.value = value
+        self.value = value 
     def __str__(self):
         return "LengthToken"
