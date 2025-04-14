@@ -168,7 +168,7 @@ class Program:
                     group_index = var.group_index
                     array_index = var.array_index
                     var, BQ_group_dict = group_by_bq_update(var, BQ_group_dict, idx)
-                    var.val = group_evaluator(var, BQ_group_dict, index = idx)
+                    var.val = group_evaluator(var, BQ_group_dict, index = idx, gindex = array_index)
                     results.append(var.val)
                 else:
                     result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))

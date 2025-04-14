@@ -18,14 +18,18 @@ def group_by_bq_update(expr, BQ_dict, idx):
         _, BQ_str_dict = group_convert_with_bq(expr.expr, BQ_str_dict)
 
         print("BQ_str_dict: ", BQ_str_dict)
-        
-
+        #TODO: GBQ에 있는 idx 처리하기. array_index를 사용해야함.
+        # GBQ를 계산 처리할 때에는 gindex를 받아서 처리하기.
         
 
         for key in BQ_str_dict.keys():
-            tem = BQ_str_eval + key
+            if key.startswith("GBQ"):
+                num = key.split("_")[1]
+                tem = BQ_str_eval + "GBQ_" + str(num) +"_of_"+str(array_index)
+            else:
+                tem = BQ_str_eval + key
             BQ_group_dict[tem] = 0
-        
+        print("BQ_group_dict: ", BQ_group_dict)
 
         if BQ_str_grouplength_rate not in BQ_dict:
             BQ_dict[BQ_str_grouplength_rate] = 1/(idx+1)
@@ -83,7 +87,7 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
         # print("category:", category)
         # print("categoryies:", categoryies)
         for target_category in categoryies:
-            category_values[target_category] = group_evaluator(node.expr, BQ_group_dict, category = target_category)
+            category_values[target_category] = group_evaluator(node.expr, BQ_group_dict, category = target_category, gindex=gindex)
             category_values[target_category] = category_values[target_category]
     
 
@@ -120,26 +124,27 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
         # print("category:", category)
         if category is None:
             raise ValueError("Category is None")
-        target = "BQ_group_"+str(category)+"_"+ node_str
-        # print("target:", target)
+        number = node_str.split("_")[1]
+        target = "BQ_group_"+str(category)+"_GBQ_"+ str(number) + "_of_"+ str(gindex) 
+        print("target:", target)
         return BQ_group_dict[target]
 
     # Handle operator nodes
     # Addition
     if isinstance(node, Addition):
-        return group_evaluator(node.left, BQ_group_dict, category) + group_evaluator(node.right, BQ_group_dict, category)
+        return group_evaluator(node.left, BQ_group_dict, category, gindex=gindex) + group_evaluator(node.right, BQ_group_dict, category, gindex=gindex)
     # Subtraction
     elif isinstance(node, Subtraction):
-        return group_evaluator(node.left, BQ_group_dict, category) - group_evaluator(node.right, BQ_group_dict, category)
+        return group_evaluator(node.left, BQ_group_dict, category, gindex=gindex) - group_evaluator(node.right, BQ_group_dict, category, gindex=gindex)
     # Multiplication
     elif isinstance(node, Multiplication):
-        return group_evaluator(node.left, BQ_group_dict, category) * group_evaluator(node.right, BQ_group_dict, category)
+        return group_evaluator(node.left, BQ_group_dict, category, gindex=gindex) * group_evaluator(node.right, BQ_group_dict, category, gindex=gindex)
     # Division
     elif isinstance(node, Division):
-        return group_evaluator(node.left, BQ_group_dict, category) / group_evaluator(node.right, BQ_group_dict, category)
+        return group_evaluator(node.left, BQ_group_dict, category, gindex=gindex) / group_evaluator(node.right, BQ_group_dict, category, gindex=gindex)
     # PowerN
     elif isinstance(node, PowerN):
-        return group_evaluator(node.base, BQ_group_dict, category) ** group_evaluator(node.exponent, BQ_group_dict, category)
+        return group_evaluator(node.base, BQ_group_dict, category, gindex=gindex) ** group_evaluator(node.exponent, BQ_group_dict, category, gindex=gindex)
     
     # if isinstance(node, Variable):
     #     if node.value() == None:
@@ -148,7 +153,7 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
     #         return node.value()
     # If the node has an 'expr' attribute, evaluate that (e.g., Variable node)
     if hasattr(node, "expr"):
-        return group_evaluator(node.expr, BQ_group_dict, category)
+        return group_evaluator(node.expr, BQ_group_dict, category, gindex=gindex)
 
     # If the node provides a value() method, use it to evaluate
     if hasattr(node, "value") and callable(node.value):
