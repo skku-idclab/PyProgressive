@@ -61,6 +61,14 @@ def group_by_bq_update(BQ_dict, idx):
     
 
     for key in BQ_dict.keys():
+        # if key.startswith("GBQ_"):
+        #     key_str = key.split("_")
+        #     using_array_idx = key_str[-1]
+        #     using_array = global_arraylist[int(using_array_idx)]
+        #     item = using_array.data[idx]
+        #     degree = key_str[1]
+        #     BQ_dict[key] = (BQ_dict[key]*idx + item[1] ** int(degree)) / (idx+1)
+
         if not key.startswith("BQ_group"):
             continue
         key_str = key.split("_")

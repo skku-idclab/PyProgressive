@@ -10,17 +10,13 @@ from .evaluator import evaluate
 from .groupby import group_by_bq_update, group_evaluator, detect_group_bq
 import time
 
-global_BQ_dict = {}
-
-
-
 G = GToken()
 
 def accum(expr):
     print("=== Before Flatten with bq converter ===")
     if hasattr(expr, 'print'):
         expr.print()
-    bq_expr, _ = convert_with_bq(expr, global_BQ_dict)
+    bq_expr, _= convert_with_bq(expr, {})
     
     # print("=== After Flatten with bq converter ===")
     # bq_expr.print()
@@ -115,6 +111,7 @@ class Program:
 
         #evaluate
         iter_accum_duration = 0
+        support_normal_BQ_dict = {}
         for idx in range(0, len(global_arraylist[0])):
             # print("=== Iteration", idx, "===")
             iter_start = time.perf_counter()
@@ -124,6 +121,55 @@ class Program:
             #         group_index = var.group_index
             #         array_index = var.array_index
             #         var, BQ_group_dict = group_by_evaluator(var, BQ_group_dict, idx)
+            for var in self.args:
+                if isinstance(var, GroupBy):
+                    BQ_group_dict = detect_group_bq(var, BQ_group_dict, idx)
+                #print("BQ_group_dict: ", BQ_group_dict)
+
+            for keys in BQ_group_dict.keys():
+                if keys.split("_")[0] == "BQ" and keys.split("_")[2] == "of":
+                    support_normal_BQ_dict[keys] = 0
+            
+            print("support_normal_BQ_dict: ", support_normal_BQ_dict)
+
+
+            for keys in support_normal_BQ_dict.keys():
+                if keys.split("_")[1] == "group":
+                    pass
+                if keys.split("_")[1] == "special":
+                    arr1id, pow1 = keys.split("_")[2], keys.split("_")[4]
+                    arr2id, pow2 = keys.split("_")[6], keys.split("_")[8]
+                    operator  = keys.split("_")[5]
+
+                    for array in global_arraylist:
+                        if array.id == int(arr1id):
+                            arr1 = array
+                        if array.id == int(arr2id):
+                            arr2 = array
+                    if arr1 == None or arr2 == None:
+                        raise ValueError("Array not found")
+
+                    if operator == "mul":
+                        support_normal_BQ_dict[keys] = (support_normal_BQ_dict[keys] * (idx) + (arr1.data[idx] ** (int(pow1))) * (arr2.data[idx] ** (int(pow2)))) / (idx+1)
+                    elif operator == "div":
+                        support_normal_BQ_dict[keys] = (support_normal_BQ_dict[keys] * (idx) + (arr1.data[idx] ** (int(pow1))) / (arr2.data[idx] ** (int(pow2)))) / (idx+1)
+                    else:
+                        raise ValueError("Operator not found")
+
+                else:
+                    degree, compute_arr = keys.split("_")[1], keys.split("_")[3]
+                    target_arr = None
+                    for array in global_arraylist:
+                        if array.id == int(compute_arr):
+                            target_arr = array
+                    if(target_arr == None):
+                        raise ValueError("Array not found")
+                    if type(target_arr.data[idx]) == tuple:
+                        support_normal_BQ_dict[keys] = (support_normal_BQ_dict[keys] * (idx) + target_arr.data[idx][1] ** (int(degree))) / (idx+1)
+                    else:
+                        support_normal_BQ_dict[keys] = (support_normal_BQ_dict[keys] * (idx) + target_arr.data[idx] ** (int(degree))) / (idx+1)
+
+
 
             for keys in BQ_dict.keys():
                 if keys.split("_")[1] == "group":
@@ -164,11 +210,11 @@ class Program:
 
             results = []
 
-            for var in self.args:
-                if isinstance(var, GroupBy):
-                    BQ_group_dict = detect_group_bq(var, BQ_group_dict, idx)
-                # print("BQ_group_dict: ", BQ_group_dict)
-            
+            for keys in support_normal_BQ_dict.keys():
+                if keys not in BQ_dict.keys():
+                    BQ_dict[keys] = support_normal_BQ_dict[keys]
+        
+            print("BQ_dict: ", BQ_dict)
             BQ_group_dict = group_by_bq_update(BQ_group_dict, idx)
 
             for var in self.args:
@@ -199,4 +245,5 @@ class Program:
 
 
 def compile(*args):
+
     return Program(*args)
