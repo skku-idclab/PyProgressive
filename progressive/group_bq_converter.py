@@ -44,13 +44,13 @@ def group_convert_with_bq(root_node, BQ_dict):
     sym_expr = expand(sym_expr)
 
     # 3. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
-    print("=== Before Transform ===")
-    print(sym_expr)
+    # print("=== Before Transform ===")
+    # print(sym_expr)
     new_sym_expr = transform_expr(sym_expr)
 
     converted_sym_expr = simplify(new_sym_expr)
-    print("=== After Transform ===")
-    print(converted_sym_expr)
+    # print("=== After Transform ===")
+    # print(converted_sym_expr)
 
     # 4. Finally, convert the resulting sympy expression back to our Node structure and return it
     converted_node = sympy_to_BQ_node(converted_sym_expr)
@@ -76,18 +76,13 @@ def sympy_to_BQ_node(expr):
             return DataItemToken()
         
         if name.startswith("BQ_") or name.startswith("GBQ_"):
-            # GBQ_와 BQ_ 둘 다 처리할 수 있도록 분기합니다.
-            # BQ_는 기존 로직, GBQ_는 새로운 변환 규칙으로 처리합니다.
+            # GBQ_와 BQ_ 둘 다 처리할 수 있도록
             if name.startswith("BQ_"):
                 # 기존: "BQ_<exponent>_of_<index>"
                 bqnum = name.split("_")[1]
                 bqarridx = name.split("_")[3]
                 return BQ(bqnum, bqarridx, name)
             else:
-                # GBQ_의 경우에도 비슷한 형태로 처리할 수 있으나,
-                # 별도의 노드가 필요하다면 이곳에서 추가 처리를 해줄 수 있습니다.
-                # 여기서는 일단 Variable을 사용하여 반환합니다.
-                print(name)
                 bqnum = name.split("_")[1]
                 return GBQ(bqnum, 0, 1, name)
         
@@ -96,7 +91,6 @@ def sympy_to_BQ_node(expr):
             return DataLengthToken(value=len(global_arraylist[0]))
         
         if name.startswith("GToken"):
-            print("GToken detected")
             return GToken(access_index=name.split("_")[1])
         
         print("Warning: Unrecognized symbol name:", name)
@@ -237,7 +231,6 @@ def transform_expr(expr: Expr) -> Expr:
     # convert them to the respective BQ symbol form.
     if expr.is_Pow:
         base, exponent = expr.as_base_exp()
-        # 특별 처리: base가 "arr_GToken"인 경우
         if base.is_Symbol and base.name == "arr_GToken" and exponent.is_Integer:
             return Mul(1, Symbol(f"GBQ_{int(exponent)}_of_idx"))
         
@@ -248,12 +241,11 @@ def transform_expr(expr: Expr) -> Expr:
                 exp_val = int(exponent)
                 return Mul(1, Symbol(f'BQ_{exp_val}_of_{match.group(1)}'))
         
-        # 그 외, 재귀적으로 처리
         new_base = transform_expr(base)
         new_exponent = transform_expr(exponent)
         return new_base ** new_exponent
 
-    # General symbol handling for simple symbols (거듭제곱 없이 단일 심볼)
+    # General symbol handling for simple symbols 
     if expr.is_Symbol:
         # 추가: "arr_GToken"인 경우
         if expr.name == "arr_GToken":

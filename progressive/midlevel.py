@@ -7,7 +7,7 @@ from .bq_converter import convert_with_bq
 from .group_bq_converter import group_convert_with_bq
 from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
-from .groupby import group_by_bq_update, group_evaluator
+from .groupby import group_by_bq_update, group_evaluator, detect_group_bq
 import time
 
 global_BQ_dict = {}
@@ -116,6 +116,7 @@ class Program:
         #evaluate
         iter_accum_duration = 0
         for idx in range(0, len(global_arraylist[0])):
+            # print("=== Iteration", idx, "===")
             iter_start = time.perf_counter()
 
             # for var in variables:
@@ -165,17 +166,25 @@ class Program:
 
             for var in self.args:
                 if isinstance(var, GroupBy):
+                    BQ_group_dict = detect_group_bq(var, BQ_group_dict, idx)
+                # print("BQ_group_dict: ", BQ_group_dict)
+            
+            BQ_group_dict = group_by_bq_update(BQ_group_dict, idx)
+
+            for var in self.args:
+                if isinstance(var, GroupBy):
                     group_index = var.group_index
                     array_index = var.array_index
-                    var, BQ_group_dict = group_by_bq_update(var, BQ_group_dict, idx)
-                    var.val = group_evaluator(var, BQ_group_dict, index = idx, gindex = array_index)
+                    
+
+                    var.val = group_evaluator(var, BQ_group_dict, index = idx, gindex = array_index, normal_BQ_dict= BQ_dict)
                     results.append(var.val)
                 else:
                     result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))
                     var.val = result
                     results.append(result)
             
-            time.sleep(0.0001)
+            time.sleep(0.001)
    
 
             iter_end = time.perf_counter()
