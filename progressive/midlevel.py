@@ -97,8 +97,9 @@ def accum(expr):
     if related_array_id is None:
         if not global_arraylist:
             raise ValueError("global_arraylist is empty")
-        related_array_id = global_arraylist[0].id
-        print("Warning: related_array_id is None, using global_arraylist[0].id as defalut")
+        related_array_id = "constant"
+        print("Warning: related_array_id is None, using global_arraylist[0].id as defalut. maybe expression is constant.")
+        return Multiplication(DataLengthToken(arrayid = "constant"), Variable(None, bq_expr))
 
     
     length_val = len(global_arraylist[int(related_array_id)].data)

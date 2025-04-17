@@ -137,6 +137,12 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
         if node.arrayid == "GToken":
             target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(gindex)
             return BQ_group_dict[target] * len(global_arraylist[0])
+        elif node.arrayid == "constant":
+            target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(gindex)
+            if node.ingroup:
+                return BQ_group_dict[target] * len(global_arraylist[0])
+            else:
+                return len(global_arraylist[0])
         else:
             target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(node.arrayid)
         print("target:", target)

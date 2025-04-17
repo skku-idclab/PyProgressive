@@ -94,6 +94,8 @@ def sympy_to_BQ_node(expr):
             try:
                 if name.startswith("DataLength_GToken"):
                     return DataLengthToken(arrayid = "GToken", ingroup = True)
+                if name.startswith("DataLength_constant"):
+                    return DataLengthToken(arrayid = "constant", ingroup = True)
                 arrayid = int(name.split("_")[1])
                 # value는 여기서 global_arraylist 참조하여 설정하거나, None으로 두고 evaluator에서 처리
                 found_array = next((a for a in global_arraylist if a.id == arrayid), None)
