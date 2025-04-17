@@ -133,8 +133,8 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
     
     if isinstance(node, DataLengthToken):
         target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(node.arrayid)
-        # print("target:", target)
-        # print("BQ_group_dict:", BQ_group_dict)
+        print("target:", target)
+        print("BQ_group_dict:", BQ_group_dict)
         if target not in BQ_group_dict:
             raise ValueError("Array not found")
         return BQ_group_dict[target]* len(global_arraylist[0])

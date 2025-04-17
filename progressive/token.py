@@ -58,10 +58,11 @@ class DataItemToken():
 
 # length of array, it can be estimated when using groupby
 class DataLengthToken():
-    def __init__(self, array = None, value = None):
+    def __init__(self, array = None, value = None, ingroup = True):
         self.array = array
-        self.arrayid = 0 #array.id if array is not None else None
-        self.value = value 
+        self.arrayid = 1230 #array.id if array is not None else None
+        self.value = value
+        self.ingroup = ingroup
     def __str__(self):
         return "LengthToken"
     
