@@ -34,9 +34,15 @@ def node_to_string(node):
         token_map[symbol_name] = node
         return symbol_name  # ex: array[i] -> arr_123
     
+    # if isinstance(node, DataLengthToken):
+    #     #symbol_name = f"arr_{id(node.array)}"
+    #     return "DataLength"
+    
     if isinstance(node, DataLengthToken):
-        #symbol_name = f"arr_{id(node.array)}"
-        return "DataLength"
+        symbol_name = f"DataLength_{node.arrayid}"
+        # token_map에 arrayid 정보를 저장할 필요가 있을 수 있음 (복원 시 사용)
+        token_map[symbol_name] = {'type': 'DataLengthToken', 'arrayid': node.arrayid}
+        return symbol_name
 
     if isinstance(node, Variable):
         # Convert expr (in Variable) to string
@@ -78,6 +84,8 @@ def node_to_string(node):
     
     if isinstance(node, GToken):
         return "arr_GToken"
+    
+    
 
 
     raise TypeError(f"Unsupported node type in node_to_string: {type(node)}")
@@ -106,8 +114,19 @@ def sympy_to_node(expr):
             expr = sympy_to_node(expr)
             return GroupBy(group_index, 0, expr)
         
-        if name.startswith("DataLength"):
-            return DataLengthToken(value = len(global_arraylist[0]))
+        if name.startswith("DataLength_"):
+            try:
+                arrayid = int(name.split("_")[1])
+                # value는 여기서 global_arraylist 참조하여 설정하거나, None으로 두고 evaluator에서 처리
+                found_array = next((a for a in global_arraylist if a.id == arrayid), None)
+                length_val = len(found_array.data) if found_array else None
+                if length_val is None:
+                     print(f"Warning: Could not find array with ID {arrayid} during sympy_to_node conversion., this is in sympy_transform.py")
+                return DataLengthToken(arrayid=arrayid, value=length_val)
+            except (IndexError, ValueError):
+                print(f"Warning: Could not parse arrayid from symbol name: {name}, this is in sympy_transform.py")
+                # 오류 처리 또는 기본값 반환
+                return DataLengthToken(arrayid=-1) # 예: 잘못된 ID
         
         if name.startswith("GToken"):
             return GToken(access_index = name.split("_")[1])

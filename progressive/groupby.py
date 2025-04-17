@@ -4,6 +4,8 @@ from .group_bq_converter import group_convert_with_bq
 from .array import Array, global_arraylist
 from .token import DataItemToken, DataLengthToken, GToken
 
+
+
 def detect_group_bq(expr, BQ_dict, idx):
     if isinstance(expr, GroupBy):
         group_index = expr.group_index
@@ -132,12 +134,16 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
         return node
     
     if isinstance(node, DataLengthToken):
-        target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(node.arrayid)
+        if node.arrayid == "GToken":
+            target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(gindex)
+            return BQ_group_dict[target] * len(global_arraylist[0])
+        else:
+            target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(node.arrayid)
         print("target:", target)
         print("BQ_group_dict:", BQ_group_dict)
         if target not in BQ_group_dict:
             raise ValueError("Array not found")
-        return BQ_group_dict[target]* len(global_arraylist[0])
+        return len(global_arraylist[0])
     
     if isinstance(node, DataItemToken):
         pass

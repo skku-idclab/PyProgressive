@@ -86,9 +86,25 @@ def sympy_to_BQ_node(expr):
                 bqnum = name.split("_")[1]
                 return GBQ(bqnum, 0, 1, name)
         
-        if name.startswith("DataLength"):
-            # DataLengthToken is handled in the sympy_to_node function
-            return DataLengthToken(value=len(global_arraylist[0]))
+        # if name.startswith("DataLength"):
+        #     # DataLengthToken is handled in the sympy_to_node function
+        #     return DataLengthToken(value=len(global_arraylist[0]))
+
+        if name.startswith("DataLength_"):
+            try:
+                if name.startswith("DataLength_GToken"):
+                    return DataLengthToken(arrayid = "GToken", ingroup = True)
+                arrayid = int(name.split("_")[1])
+                # value는 여기서 global_arraylist 참조하여 설정하거나, None으로 두고 evaluator에서 처리
+                found_array = next((a for a in global_arraylist if a.id == arrayid), None)
+                length_val = len(found_array.data) if found_array else None
+                if length_val is None:
+                     print(f"Warning: Could not find array with ID {arrayid} during sympy_to_node conversion., this is in group_bq_converter.py")
+                return DataLengthToken(arrayid=arrayid, value=length_val)
+            except (IndexError, ValueError):
+                print(f"Warning: Could not parse arrayid from symbol name: {name} , this is in group_bq_converter.py")
+                # 오류 처리 또는 기본값 반환
+                return DataLengthToken(arrayid=-1) # 예: 잘못된 ID
         
         if name.startswith("GToken"):
             return GToken(access_index=name.split("_")[1])

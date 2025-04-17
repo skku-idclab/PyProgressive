@@ -1,7 +1,7 @@
 from .token import SpecialToken
 from .variable import Variable
-from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision, BQ, GroupBy
-from .token import DataItemToken, DataLengthToken, GToken
+from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision, BQ, GroupBy, BinaryOperationNode, InplaceOperationNode
+from .token import DataItemToken, DataLengthToken, GToken, global_G_arridx
 from .array import Array, global_arraylist
 from .bq_converter import convert_with_bq
 from .group_bq_converter import group_convert_with_bq
@@ -12,15 +12,103 @@ import time
 
 G = GToken()
 
+
+def find_array_id_in_expr(node):
+    """
+    표현식 트리를 'node'부터 재귀적으로 탐색하여
+    처음 발견되는 DataItemToken의 'id'(array.id)를 반환합니다.
+
+    Args:
+        node: 표현식 트리 또는 서브트리의 시작 노드.
+
+    Returns:
+        int: DataItemToken을 찾으면 해당 배열 ID, 찾지 못하면 None.
+    """
+    if node is None:
+        return None
+
+    # 1. 기본 케이스: DataItemToken 찾음
+    if isinstance(node, DataItemToken):
+        # DataItemToken의 'id' 속성이 array.id를 저장하고 있음
+        return node.id
+    
+    if isinstance(node, BQ):
+        return node.arridx
+
+    # 2. 재귀 케이스: 자식 노드 또는 내부 표현식 탐색
+
+    # Variable 노드 처리
+    if isinstance(node, Variable):
+        return find_array_id_in_expr(node.expr)
+
+    # GroupBy 노드 처리
+    if isinstance(node, GroupBy):
+        # 그룹화 대상 표현식 내부 탐색
+        expr_id = find_array_id_in_expr(node.expr)
+        if expr_id is not None:
+            return expr_id
+        # GroupBy 자체는 array_index (정수)만 저장하므로 여기서 ID 반환 안 함
+        return None
+
+    # PowerN 노드 처리 (주로 base 탐색)
+    if isinstance(node, PowerN):
+        base_id = find_array_id_in_expr(node.base)
+        if base_id is not None:
+            return base_id
+        # 지수 부분도 탐색 (가능성은 낮음)
+        exp_id = find_array_id_in_expr(node.exponent)
+        if exp_id is not None:
+            return exp_id
+        return None
+
+    # BinaryOperationNode 및 InplaceOperationNode 처리 (왼쪽 우선 탐색)
+    if isinstance(node, (BinaryOperationNode, InplaceOperationNode)):
+        left_id = find_array_id_in_expr(node.left)
+        if left_id is not None:
+            return left_id
+        right_id = find_array_id_in_expr(node.right)
+        if right_id is not None:
+            return right_id
+        return None
+
+    # 3. 기본 케이스: 다른 리프 노드 또는 관련 없는 노드
+    # (int, float, str, BQ, GBQ, DataLengthToken, GToken 등은 array id를 포함하지 않음)
+    if not hasattr(node, 'left') and not hasattr(node, 'right') and \
+       not hasattr(node, 'base') and not hasattr(node, 'exponent') and \
+       not hasattr(node, 'expr'):
+        return None
+
+    # 모든 탐색 경로에서 찾지 못한 경우
+    return None
+
 def accum(expr):
     # print("=== Before Flatten with bq converter ===")
     # if hasattr(expr, 'print'):
     #     expr.print()
     bq_expr, _= convert_with_bq(expr, {})
+
+    related_array_id = find_array_id_in_expr(bq_expr)
+    print("related_array_id: ", related_array_id)
+
+    if related_array_id == "GToken":
+        return Multiplication(DataLengthToken(arrayid = "GToken", ingroup = True), Variable(None, bq_expr))
+
+
+    if related_array_id is None:
+        if not global_arraylist:
+            raise ValueError("global_arraylist is empty")
+        related_array_id = global_arraylist[0].id
+        print("Warning: related_array_id is None, using global_arraylist[0].id as defalut")
+
+    
+    length_val = len(global_arraylist[int(related_array_id)].data)
+    found_array = global_arraylist[int(related_array_id)]
     
     # print("=== After Flatten with bq converter ===")
     # bq_expr.print()
-    return Multiplication(DataLengthToken(value = len(global_arraylist[0])), Variable(None, bq_expr)) 
+    return Multiplication(DataLengthToken(value = length_val, arrayid = related_array_id, array = found_array), Variable(None, bq_expr)) 
+
+
 
 def each(*args):
     if len(args) == 1:
@@ -184,6 +272,7 @@ class Program:
                 if isinstance(var, GroupBy):
                     group_index = var.group_index
                     array_index = var.array_index
+                    global_G_arridx = array_index
                 
                     var.val = group_evaluator(var, BQ_group_dict, index = idx, gindex = array_index, normal_BQ_dict= BQ_dict)
                     results.append(var.val)

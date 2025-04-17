@@ -1,4 +1,4 @@
-from .token import SpecialToken, DataItemToken, DataLengthToken
+
 
 global_arraylist = []
 
@@ -13,9 +13,6 @@ class Array:
         Array._id += 1
 
     
-    def __getitem__(self, index):   
-        return DataItemToken(self, self.id)
-
     def __len__(self):        
         return self.length #DataLengthToken(self)
     

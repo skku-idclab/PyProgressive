@@ -87,10 +87,15 @@ def sympy_to_BQ_node(expr):
             bqarridx = name.split("_")[3]
             return BQ(bqnum, bqarridx, name)
         
-        if name.startswith("DataLength"):
-            # DataLengthToken is handled in the sympy_to_node function
-            return DataLengthToken(value = len(global_arraylist[0]))
-        
+        # if name.startswith("DataLength"):
+        #     # DataLengthToken is handled in the sympy_to_node function
+        #     return DataLengthToken(value = len(global_arraylist[0]))
+        if isinstance(expr, DataLengthToken):
+            symbol_name = f"DataLength_{expr.arrayid}"
+            # token_map에 arrayid 정보를 저장할 필요가 있을 수 있음 (복원 시 사용)
+            token_map[symbol_name] = {'type': 'DataLengthToken', 'arrayid': expr.arrayid}
+            return symbol_name
+
         if name.startswith("GToken"):
             print("GToken detected")
             return GToken(access_index = name.split("_")[1])
