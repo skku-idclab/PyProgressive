@@ -110,8 +110,8 @@ def group_by_bq_update(BQ_dict, idx):
 def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = None, normal_BQ_dict = None):
     node = var
     if isinstance(node, GroupBy):
-        print("BQ_group_dict:", BQ_group_dict)
-        print("normal_BQ_dict:", normal_BQ_dict)
+        # print("BQ_group_dict:", BQ_group_dict)
+        # print("normal_BQ_dict:", normal_BQ_dict)
         #node.print()
         categoryies = set()
         category_values = {}
@@ -145,8 +145,8 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
                 return len(global_arraylist[0])
         else:
             target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(node.arrayid)
-        print("target:", target)
-        print("BQ_group_dict:", BQ_group_dict)
+        # print("target:", target)
+        # print("BQ_group_dict:", BQ_group_dict)
         if target not in BQ_group_dict:
             raise ValueError("Array not found")
         return len(global_arraylist[0])

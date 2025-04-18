@@ -20,8 +20,8 @@ if __name__ == "__main__":
     # compiled = pp.compile(slope, intercept)
     # compiled.run(interval=0.0001, callback = my_callback)
 
-    a = accum(each(array1))/len(array1)
-    b = accum((each(array1)-a)**2) / len(array1)
+    a = accum(each(array1)*each(array2))/len(array1)
+    b = accum((each(array1)-a)**3/ len(array1))
 
     compiled = pp.compile(a, b)
     compiled.run(interval=0, callback = lambda a, b: print(f"a: {a}, b: {b}"))

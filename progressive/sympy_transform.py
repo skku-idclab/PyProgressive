@@ -31,6 +31,8 @@ def node_to_string(node):
         #symbol_name = f"arr_{id(node.array)}"
 
         symbol_name = "arr_" + str(node.id)
+        # if node.index != -1:
+        #     symbol_name += f"_{node.index}"
         token_map[symbol_name] = node
         return symbol_name  # ex: array[i] -> arr_123
     
@@ -105,7 +107,10 @@ def sympy_to_node(expr):
         
         if name.startswith("BQ_"):
             bqnum = name.split("_")[1]
-            bqarridx = name.split("_")[3]
+            if name.startswith("BQ_special"):
+                bqarridx = name.split("_")[2]
+            else:
+                bqarridx = name.split("_")[3]
             return BQ(bqnum, bqarridx, name)
         
         if name.startswith("GroupBy_"):

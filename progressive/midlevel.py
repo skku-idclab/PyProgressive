@@ -88,7 +88,7 @@ def accum(expr):
     bq_expr, _= convert_with_bq(expr, {})
 
     related_array_id = find_array_id_in_expr(bq_expr)
-    print("related_array_id: ", related_array_id)
+    # print("related_array_id: ", related_array_id)
 
     if related_array_id == "GToken":
         return Multiplication(DataLengthToken(arrayid = "GToken", ingroup = True), Variable(None, bq_expr))
@@ -143,7 +143,13 @@ def each(*args):
 def group(group_index_item, expr):
     if isinstance(group_index_item, DataItemToken):
         if group_index_item.index == -1:
-            raise ValueError("Index is not specified")
+            using_arr = group_index_item.array
+            if type(using_arr.data[0]) is tuple:
+                raise ValueError("Index is not specified")
+            # else:
+            #     print("str array. not a tuple")
+            #     #return GroupBy(group_index_item.index, group_index_item.id, expr)
+            #     raise ValueError("Index is not specified")
         group_index = group_index_item.index
         group_arrayid = group_index_item.id
         return GroupBy(group_index, group_arrayid, expr)
@@ -180,17 +186,17 @@ class Program:
         # compile
         # 1. convert to BQ & find BQ that need to calculate(update BQ_dict)
         for var in variables:
-            print("=== Before BQ Conversion ===")
-            var.print()
+            # print("=== Before BQ Conversion ===")
+            # var.print()
             if isinstance(var, GroupBy):
                 var.expr, BQ_group_dict = group_convert_with_bq(var.expr, BQ_group_dict)
             else:  
                 var, BQ_dict = convert_with_bq(var, BQ_dict)
         
-        print("=== After BQ Conversion ===")
-        for i, v in enumerate(variables, start=1):
-            print(f"Variable {i}:")
-            v.print()
+        # print("=== After BQ Conversion ===")
+        # for i, v in enumerate(variables, start=1):
+        #     print(f"Variable {i}:")
+        #     v.print()
 
         #groupby handling
         # for var in variables:
@@ -205,11 +211,6 @@ class Program:
             # print("=== Iteration", idx, "===")
             iter_start = time.perf_counter()
 
-            # for var in variables:
-            #     if isinstance(var, GroupBy):
-            #         group_index = var.group_index
-            #         array_index = var.array_index
-            #         var, BQ_group_dict = group_by_evaluator(var, BQ_group_dict, idx)
             for var in self.args:
                 if isinstance(var, GroupBy):
                     BQ_group_dict = detect_group_bq(var, BQ_group_dict, idx)
