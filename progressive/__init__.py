@@ -1,3 +1,3 @@
 from .array import Array
 from .variable import Variable
-from .midlevel import Program, compile
+from .midlevel import Program, compile, each, accum, group, G

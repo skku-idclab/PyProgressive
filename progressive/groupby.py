@@ -98,11 +98,14 @@ def group_by_bq_update(BQ_dict, idx):
         # for key in BQ_str_dict.keys():
         #     if key not in BQ_dict:
         #         BQ_dict[key] = item[1]
-        # print("BQ_dict: ", BQ_dict)
+        #print("BQ_dict: ", BQ_dict)
 
 
-        if not isinstance(item, tuple):
-            raise ValueError("Array item must be a tuple in group operation")
+
+
+        # if not isinstance(item, tuple):
+        #     pass
+        #     #raise ValueError("Array item must be a tuple in group operation")
         
         
     return BQ_dict

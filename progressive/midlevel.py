@@ -98,7 +98,7 @@ def accum(expr):
         if not global_arraylist:
             raise ValueError("global_arraylist is empty")
         related_array_id = "constant"
-        print("Warning: related_array_id is None, using global_arraylist[0].id as defalut. maybe expression is constant.")
+        #print("Warning: related_array_id is None, using global_arraylist[0].id as defalut. maybe expression is constant.")
         return Multiplication(DataLengthToken(arrayid = "constant"), Variable(None, bq_expr))
 
     
@@ -142,7 +142,7 @@ def each(*args):
 
 def group(group_index_item, expr):
     if isinstance(group_index_item, DataItemToken):
-        if group_index_item.index == -1:
+        if group_index_item.index == -1: # counting case
             using_arr = group_index_item.array
             if type(using_arr.data[0]) is tuple:
                 raise ValueError("Index is not specified")
