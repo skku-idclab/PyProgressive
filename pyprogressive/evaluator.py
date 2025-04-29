@@ -1,6 +1,6 @@
-from progressive.expression import Addition, Subtraction, Multiplication, Division, PowerN
-from progressive.variable import Variable
-from progressive.token import DataLengthToken
+from pyprogressive.expression import Addition, Subtraction, Multiplication, Division, PowerN
+from pyprogressive.variable import Variable
+from pyprogressive.token import DataLengthToken
 def evaluate(node, bq_values, length = None):
     """
     Evaluates the given computation tree (node) and returns the final value.

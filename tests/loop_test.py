@@ -1,5 +1,5 @@
 import unittest
-import progressive as pp
+import pyprogressive as pp
 
 class TestLoop(unittest.TestCase):
     def test_no_nested_loop(self):

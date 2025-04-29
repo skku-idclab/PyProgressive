@@ -1,7 +1,7 @@
-import progressive as pp
+import pyprogressive as pp
 from sklearn.datasets import fetch_california_housing
 import pandas as pd
-from progressive.midlevel import each, accum
+from pyprogressive.midlevel import each, accum
 
 data = fetch_california_housing(as_frame=True)
 

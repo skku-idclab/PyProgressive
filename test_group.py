@@ -1,5 +1,5 @@
-import progressive as pp
-from progressive.midlevel import each, accum, group, G
+import pyprogressive as pp
+from pyprogressive.midlevel import each, accum, group, G
 
 if __name__ == "__main__":  
     array = pp.Array([2, 4, 6, 8, 10, 12, 14, 16, 18, 20])
