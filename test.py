@@ -31,5 +31,5 @@ if __name__ == "__main__":
     mean = accum(each(D)) / len(D)
     var = accum((mean - each(D))**2) / len(D)
     compiled = pp.compile(var)
-    compiled.run(interval = 0, callback = print)
+    compiled.run(interval = 0, callback = lambda var, elapsed : print(var, elapsed))
 

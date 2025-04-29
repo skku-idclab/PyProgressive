@@ -43,11 +43,11 @@ covX1Y = accum((each(arrayX1)-mean1)*(each(arrayY)-meanY)) / len(arrayX1)
 # covX3Y = accum((each(arrayX3)-mean3)*(each(arrayY)-meanY)) / len(arrayX3)
 # covX4Y = accum((each(arrayX4)-mean4)*(each(arrayY)-meanY)) / len(arrayX4)
 
-def mycallback(cov1,var1,varY):
-    print(cov1, var1, varY)
+def mycallback(cov1,var1,varY, elapsed):
+    print(cov1, var1, varY, elapsed)
 
 
 
 compiled = pp.compile(covX1Y,var1, varY)
-compiled.run(interval=0.1, callback = mycallback)
+compiled.run(callback = mycallback)
 

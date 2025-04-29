@@ -9,8 +9,11 @@ from .sympy_transform import flatten_with_sympy
 from .evaluator import evaluate
 from .groupby import group_by_bq_update, group_evaluator, detect_group_bq
 import time
+from .elapsed import Elapsed
+import inspect
 
 G = GToken()
+elapsed = Elapsed()
 
 
 def find_array_id_in_expr(node):
@@ -160,7 +163,8 @@ def group(group_index_item, expr):
 class Program:
     def __init__(self, *args):
         self.args = args
-    def run(self, interval=1, callback=None):
+    def run(self, interval=1, callback=None, tau = 0.99):
+        
 
         for array in global_arraylist:
             if len(array) != len(global_arraylist[0]):
@@ -205,6 +209,7 @@ class Program:
 
 
         #evaluate
+        elapsed.start()
         iter_accum_duration = 0
         support_normal_BQ_dict = {}
         for idx in range(0, len(global_arraylist[0])):
@@ -290,10 +295,40 @@ class Program:
 
 
             iter_accum_duration += iter_end - iter_start
-            if iter_accum_duration > interval:
-                #args_val = [arg.val for arg in self.args]
-                callback(*results)
-                iter_accum_duration -= interval
+            if iter_accum_duration > interval * tau:
+                elapsed.stop()
+                if not inspect.isbuiltin(callback):
+                    sig = inspect.signature(callback)
+                    num_params = len(sig.parameters)
+                    num_results = len(results)
+                    if num_params == num_results:
+                        callback(*results)
+                        iter_accum_duration -= interval
+                    elif num_params == num_results + 1:
+                        callback(*results, elapsed)
+                        iter_accum_duration -= interval
+                    else:
+                        raise ValueError(f"Callback function must have {num_results} or {num_results + 1}(when including elpased) parameters, but got {num_params}.")
+                else:
+                    callback(*results)
+                    iter_accum_duration -= interval
+        elapsed.stop()
+        elapsed.done = True
+
+        if not inspect.isbuiltin(callback):
+                sig = inspect.signature(callback)
+                num_params = len(sig.parameters)
+                num_results = len(results)
+                if num_params == num_results:
+                    callback(*results)
+                elif num_params == num_results + 1:
+                    callback(*results, elapsed)
+                else:
+                    raise ValueError(f"Callback function must have {num_results} or {num_results + 1}(when including elpased) parameters, but got {num_params}.")
+        else:
+            callback(*results)
+            
+        
 
 
 
