@@ -2,15 +2,15 @@
 
 global_arraylist = []
 
-class Array:
+class array:
     _id = 0
     def __init__(self, data):
         self.data = data
         self.length = len(data)
         self.iter = 0
-        self.id = Array._id
+        self.id = array._id
         global_arraylist.append(self)
-        Array._id += 1
+        array._id += 1
 
     
     def __len__(self):        

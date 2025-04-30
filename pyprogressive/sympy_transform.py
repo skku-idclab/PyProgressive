@@ -28,21 +28,16 @@ def node_to_string(node):
 
     # 2) Token or Variable?
     if isinstance(node, DataItemToken):
-        #symbol_name = f"arr_{id(node.array)}"
+
 
         symbol_name = "arr_" + str(node.id)
-        # if node.index != -1:
-        #     symbol_name += f"_{node.index}"
+
         token_map[symbol_name] = node
         return symbol_name  # ex: array[i] -> arr_123
     
-    # if isinstance(node, DataLengthToken):
-    #     #symbol_name = f"arr_{id(node.array)}"
-    #     return "DataLength"
     
     if isinstance(node, DataLengthToken):
         symbol_name = f"DataLength_{node.arrayid}"
-        # token_map에 arrayid 정보를 저장할 필요가 있을 수 있음 (복원 시 사용)
         token_map[symbol_name] = {'type': 'DataLengthToken', 'arrayid': node.arrayid}
         return symbol_name
 
@@ -122,7 +117,6 @@ def sympy_to_node(expr):
         if name.startswith("DataLength_"):
             try:
                 arrayid = int(name.split("_")[1])
-                # value는 여기서 global_arraylist 참조하여 설정하거나, None으로 두고 evaluator에서 처리
                 found_array = next((a for a in global_arraylist if a.id == arrayid), None)
                 length_val = len(found_array.data) if found_array else None
                 if length_val is None:
@@ -130,8 +124,7 @@ def sympy_to_node(expr):
                 return DataLengthToken(arrayid=arrayid, value=length_val)
             except (IndexError, ValueError):
                 print(f"Warning: Could not parse arrayid from symbol name: {name}, this is in sympy_transform.py")
-                # 오류 처리 또는 기본값 반환
-                return DataLengthToken(arrayid=-1) # 예: 잘못된 ID
+                return DataLengthToken(arrayid=-1) 
         
         if name.startswith("GToken"):
             return GToken(access_index = name.split("_")[1])
@@ -139,11 +132,9 @@ def sympy_to_node(expr):
         print("Warning: Unrecognized symbol name:", name)
         print("in sympytonode")
 
-        # others considered as Variable(None, 0). will be modified later
         return Variable(None, 0)
     
     if isinstance(expr, sympy.Function):
-        # Handle unknown functions as a placeholder
         name = str(expr)
         if name.startswith("GroupBy"):
             group_index = name.split("(")[1].split(",")[0]
@@ -205,16 +196,14 @@ def flatten_with_sympy(root_node):
     3) sympy.expand
     4) sympy -> Node
     """
-    # print("rootnode:")
-    # root_node.print()
+
     expr_str = node_to_string(root_node)
-    #print(f"node to string result: {expr_str}")
+
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
-    #print(f"expanded expr: {expanded_expr}")
+
     new_root_node = sympy_to_node(expanded_expr)
-    # print("new root node:")
-    # new_root_node.print()
+
     return new_root_node
 
 

@@ -65,25 +65,18 @@ class DataLengthToken():
         if array is not None:
             self.array = array
             self.arrayid = array.id
-            # value를 명시적으로 받지 않으면, 배열 객체에서 가져옴
+ 
             self.value = value if value is not None else len(array.data)
         elif arrayid is not None:
-            self.array = None # 필요시 global_arraylist에서 찾아야 함
+            self.array = None 
             self.arrayid = arrayid
-            # arrayid만 있을 경우, value는 평가 시점에 결정해야 할 수 있음
-            # 또는 global_arraylist를 여기서 참조하여 설정 (단, global 참조는 주의)
-            # 우선 None으로 두고 evaluator에서 처리하는 것이 안전할 수 있음
+
             found_array = next((a for a in global_arraylist if a.id == arrayid), None)
             self.value = value if value is not None else (len(found_array.data) if found_array else None)
 
         else:
-            # array와 arrayid 둘 다 없는 경우, 오류 처리 또는 기본값 설정 (현재 방식 개선 필요)
-            # 예를 들어, 오류 발생시키기:
             raise ValueError("DataLengthToken requires either an array object or an arrayid.")
-            # 또는 임시 ID (단, 이 ID의 의미를 명확히 해야 함)
-            # self.array = None
-            # self.arrayid = -1 # 또는 다른 특수 값
-            # self.value = value
+
 
         self.ingroup = ingroup
     def __str__(self):

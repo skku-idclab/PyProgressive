@@ -1,7 +1,7 @@
 from .expression import Node, GroupBy, InplaceOperationNode, BinaryOperationNode, BQ, Addition, Subtraction, Multiplication, Division, PowerN
 from .variable import Variable
 from .group_bq_converter import group_convert_with_bq
-from .array import Array, global_arraylist
+from .array import array, global_arraylist
 from .token import DataItemToken, DataLengthToken, GToken
 
 
@@ -20,8 +20,6 @@ def detect_group_bq(expr, BQ_dict, idx):
 
         _, BQ_str_dict = group_convert_with_bq(expr.expr, BQ_str_dict)
 
-        # print("BQ_str_dict: ", BQ_str_dict)
-        # print("array_index: ", array_index)
 
         
 
@@ -44,10 +42,7 @@ def detect_group_bq(expr, BQ_dict, idx):
 def group_by_bq_update(BQ_dict, idx):
 
 
-    # if BQ_str_grouplength_rate not in BQ_dict:
-    #     BQ_dict[BQ_str_grouplength_rate] = 1/(idx+1)
-    # else:
-    #     BQ_dict[BQ_str_grouplength_rate] = (BQ_dict[BQ_str_grouplength_rate] * (idx) + 1) / (idx+1)
+
     
     for key in BQ_dict.keys():
         key_str = key.split("_")
@@ -63,13 +58,7 @@ def group_by_bq_update(BQ_dict, idx):
     
 
     for key in BQ_dict.keys():
-        # if key.startswith("GBQ_"):
-        #     key_str = key.split("_")
-        #     using_array_idx = key_str[-1]
-        #     using_array = global_arraylist[int(using_array_idx)]
-        #     item = using_array.data[idx]
-        #     degree = key_str[1]
-        #     BQ_dict[key] = (BQ_dict[key]*idx + item[1] ** int(degree)) / (idx+1)
+
 
         if not key.startswith("BQ_group"):
             continue
@@ -77,8 +66,7 @@ def group_by_bq_update(BQ_dict, idx):
         using_array_idx = key_str[-1]
         using_array = global_arraylist[int(using_array_idx)]
         item = using_array.data[idx]
-        group_index = 0 # TODO: need to fix here for group index
-        # print("key_str: ", key_str)
+        group_index = 0 
         if key_str[1] == "group" and key_str[2] == item[group_index]:
             degree, compute_arr = key_str[4], key_str[6]
             target_arr = None
@@ -95,17 +83,7 @@ def group_by_bq_update(BQ_dict, idx):
                 category_length = category_lengthrate * (idx+1) 
                 BQ_dict[key] = (BQ_dict[key] * (category_length-1) + item[1] ** (int(degree))) / category_length # TODO: Data Item Indexing
 
-        # for key in BQ_str_dict.keys():
-        #     if key not in BQ_dict:
-        #         BQ_dict[key] = item[1]
-        #print("BQ_dict: ", BQ_dict)
 
-
-
-
-        # if not isinstance(item, tuple):
-        #     pass
-        #     #raise ValueError("Array item must be a tuple in group operation")
         
         
     return BQ_dict
@@ -113,16 +91,13 @@ def group_by_bq_update(BQ_dict, idx):
 def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = None, normal_BQ_dict = None):
     node = var
     if isinstance(node, GroupBy):
-        # print("BQ_group_dict:", BQ_group_dict)
-        # print("normal_BQ_dict:", normal_BQ_dict)
-        #node.print()
+
         categoryies = set()
         category_values = {}
         for key in BQ_group_dict.keys():
             if key.startswith("BQ_group"):
                 categoryies.add(key.split("_")[2])
-        # print("category:", category)
-        # print("categoryies:", categoryies)
+
         for target_category in categoryies:
             category_values[target_category] = group_evaluator(node.expr, BQ_group_dict, category = target_category, gindex=gindex, normal_BQ_dict= normal_BQ_dict)
             category_values[target_category] = category_values[target_category]
@@ -148,8 +123,7 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
                 return len(global_arraylist[0])
         else:
             target = "BQ_grouplength_"+str(category)+"_lengthrate_of_"+str(node.arrayid)
-        # print("target:", target)
-        # print("BQ_group_dict:", BQ_group_dict)
+
         if target not in BQ_group_dict:
             raise ValueError("Array not found")
         return len(global_arraylist[0])
@@ -159,14 +133,11 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
     
 
     # Convert to string and check if it's a BQ_x node (usually "BQ_1", "BQ_2", etc.)
-    # need to fix here when using G token 
     node_str = str(node)
     if node_str.startswith("BQ_"):
         target = node_str
         return normal_BQ_dict[target] 
     elif node_str.startswith("GBQ_"):
-        # print("node_str:", node_str)
-        # print("category:", category)
         if category is None:
             raise ValueError("Category is None")
         number = node_str.split("_")[1]
@@ -190,11 +161,6 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
     elif isinstance(node, PowerN):
         return group_evaluator(node.base, BQ_group_dict, category, gindex=gindex, normal_BQ_dict= normal_BQ_dict) ** group_evaluator(node.exponent, BQ_group_dict, category, gindex=gindex, normal_BQ_dict= normal_BQ_dict)
     
-    # if isinstance(node, Variable):
-    #     if node.value() == None:
-    #         return group_evaluator(node.expr, BQ_group_dict, category)
-    #     else:
-    #         return node.value()
     # If the node has an 'expr' attribute, evaluate that (e.g., Variable node)
     if hasattr(node, "expr"):
         return group_evaluator(node.expr, BQ_group_dict, category, gindex=gindex, normal_BQ_dict= normal_BQ_dict)

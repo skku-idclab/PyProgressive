@@ -2,7 +2,7 @@ from .token import SpecialToken
 from .variable import Variable
 from .expression import Node, Addition, Subtraction, Multiplication, Division, PowerN, InplaceAddition, InplaceSubtraction, InplaceMultiplication, InplaceDivision, BQ, GroupBy, BinaryOperationNode, InplaceOperationNode
 from .token import DataItemToken, DataLengthToken, GToken, global_G_arridx
-from .array import Array, global_arraylist
+from .array import array, global_arraylist
 from .bq_converter import convert_with_bq
 from .group_bq_converter import group_convert_with_bq
 from .sympy_transform import flatten_with_sympy
@@ -17,54 +17,40 @@ elapsed = Elapsed()
 
 
 def find_array_id_in_expr(node):
-    """
-    표현식 트리를 'node'부터 재귀적으로 탐색하여
-    처음 발견되는 DataItemToken의 'id'(array.id)를 반환합니다.
 
-    Args:
-        node: 표현식 트리 또는 서브트리의 시작 노드.
-
-    Returns:
-        int: DataItemToken을 찾으면 해당 배열 ID, 찾지 못하면 None.
-    """
     if node is None:
         return None
 
-    # 1. 기본 케이스: DataItemToken 찾음
+   
     if isinstance(node, DataItemToken):
-        # DataItemToken의 'id' 속성이 array.id를 저장하고 있음
         return node.id
     
     if isinstance(node, BQ):
         return node.arridx
 
-    # 2. 재귀 케이스: 자식 노드 또는 내부 표현식 탐색
 
-    # Variable 노드 처리
+
     if isinstance(node, Variable):
         return find_array_id_in_expr(node.expr)
 
-    # GroupBy 노드 처리
     if isinstance(node, GroupBy):
-        # 그룹화 대상 표현식 내부 탐색
         expr_id = find_array_id_in_expr(node.expr)
         if expr_id is not None:
             return expr_id
-        # GroupBy 자체는 array_index (정수)만 저장하므로 여기서 ID 반환 안 함
+
         return None
 
-    # PowerN 노드 처리 (주로 base 탐색)
     if isinstance(node, PowerN):
         base_id = find_array_id_in_expr(node.base)
         if base_id is not None:
             return base_id
-        # 지수 부분도 탐색 (가능성은 낮음)
+
         exp_id = find_array_id_in_expr(node.exponent)
         if exp_id is not None:
             return exp_id
         return None
 
-    # BinaryOperationNode 및 InplaceOperationNode 처리 (왼쪽 우선 탐색)
+
     if isinstance(node, (BinaryOperationNode, InplaceOperationNode)):
         left_id = find_array_id_in_expr(node.left)
         if left_id is not None:
@@ -74,24 +60,20 @@ def find_array_id_in_expr(node):
             return right_id
         return None
 
-    # 3. 기본 케이스: 다른 리프 노드 또는 관련 없는 노드
-    # (int, float, str, BQ, GBQ, DataLengthToken, GToken 등은 array id를 포함하지 않음)
+
     if not hasattr(node, 'left') and not hasattr(node, 'right') and \
        not hasattr(node, 'base') and not hasattr(node, 'exponent') and \
        not hasattr(node, 'expr'):
         return None
 
-    # 모든 탐색 경로에서 찾지 못한 경우
     return None
 
 def accum(expr):
-    # print("=== Before Flatten with bq converter ===")
-    # if hasattr(expr, 'print'):
-    #     expr.print()
+
     bq_expr, _= convert_with_bq(expr, {})
 
     related_array_id = find_array_id_in_expr(bq_expr)
-    # print("related_array_id: ", related_array_id)
+
 
     if related_array_id == "GToken":
         return Multiplication(DataLengthToken(arrayid = "GToken", ingroup = True), Variable(None, bq_expr))
@@ -101,15 +83,13 @@ def accum(expr):
         if not global_arraylist:
             raise ValueError("global_arraylist is empty")
         related_array_id = "constant"
-        #print("Warning: related_array_id is None, using global_arraylist[0].id as defalut. maybe expression is constant.")
         return Multiplication(DataLengthToken(arrayid = "constant"), Variable(None, bq_expr))
 
     
     length_val = len(global_arraylist[int(related_array_id)].data)
     found_array = global_arraylist[int(related_array_id)]
     
-    # print("=== After Flatten with bq converter ===")
-    # bq_expr.print()
+
     return Multiplication(DataLengthToken(value = length_val, arrayid = related_array_id, array = found_array), Variable(None, bq_expr)) 
 
 
@@ -117,14 +97,14 @@ def accum(expr):
 def each(*args):
     if len(args) == 1:
         i = args[0]
-        if isinstance(i, Array):
+        if isinstance(i, array):
             return DataItemToken(i, i.id)
         else:
             raise ValueError("Only array is supported.")
         
     elif len(args) == 2:
         d, index = args
-        if isinstance(d, Array):
+        if isinstance(d, array):
             types_in_list = set(type(x) for x in d.data)
             if len(types_in_list) != 1:
                 raise ValueError("Array must be homogeneous")
@@ -149,10 +129,7 @@ def group(group_index_item, expr):
             using_arr = group_index_item.array
             if type(using_arr.data[0]) is tuple:
                 raise ValueError("Index is not specified")
-            # else:
-            #     print("str array. not a tuple")
-            #     #return GroupBy(group_index_item.index, group_index_item.id, expr)
-            #     raise ValueError("Index is not specified")
+
         group_index = group_index_item.index
         group_arrayid = group_index_item.id
         return GroupBy(group_index, group_arrayid, expr)
@@ -174,14 +151,9 @@ class Program:
             if isinstance(var, GroupBy):
                 var = flatten_with_sympy(var)
             else:
-                # print("=== Before Flatten with Sympy ===")
-                # var.print()
                 var.expr = flatten_with_sympy(var)
 
-        # print("=== After Flatten with Sympy ===")
-        # for i, v in enumerate(variables, start=1):
-        #     print(f"Variable {i}:")
-        #     v.print()
+
        
 
         BQ_dict = {}
@@ -190,22 +162,12 @@ class Program:
         # compile
         # 1. convert to BQ & find BQ that need to calculate(update BQ_dict)
         for var in variables:
-            # print("=== Before BQ Conversion ===")
-            # var.print()
+
             if isinstance(var, GroupBy):
                 var.expr, BQ_group_dict = group_convert_with_bq(var.expr, BQ_group_dict)
             else:  
                 var, BQ_dict = convert_with_bq(var, BQ_dict)
         
-        # print("=== After BQ Conversion ===")
-        # for i, v in enumerate(variables, start=1):
-        #     print(f"Variable {i}:")
-        #     v.print()
-
-        #groupby handling
-        # for var in variables:
-        #     if isinstance(var, GroupBy):
-        #         var, BQ_dict = group_by_converter(var.expr, BQ_dict)
 
 
         #evaluate
@@ -288,15 +250,19 @@ class Program:
                     var.val = result
                     results.append(result)
             
-            time.sleep(0.001)
+            
+            #time.sleep(0.001)
    
 
             iter_end = time.perf_counter()
+
+            callback_start = time.perf_counter()
 
 
             iter_accum_duration += iter_end - iter_start
             if iter_accum_duration > interval * tau:
                 elapsed.stop()
+                elapsed.done = False
                 if not inspect.isbuiltin(callback):
                     sig = inspect.signature(callback)
                     num_params = len(sig.parameters)
@@ -312,6 +278,11 @@ class Program:
                 else:
                     callback(*results)
                     iter_accum_duration -= interval
+                callback_start = time.perf_counter()
+                iter_accum_duration += callback_start - iter_end
+
+
+
         elapsed.stop()
         elapsed.done = True
 

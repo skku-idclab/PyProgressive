@@ -49,15 +49,10 @@ def convert_with_bq(root_node, BQ_dict):
 
 
     # 3. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
-    # print("=== Before Transform ===")
-    # print(sym_expr)
     new_sym_expr = transform_expr(sym_expr)
 
     converted_sym_expr = simplify(new_sym_expr)
     
-    # print("=== After Transform ===")
-    # print(new_sym_expr)
-
     # 4. Finally, convert the resulting sympy expression back to our Node structure and return it
     converted_node = sympy_to_BQ_node(converted_sym_expr)
 
@@ -91,9 +86,6 @@ def sympy_to_BQ_node(expr):
                 bqarridx = name.split("_")[3]
             return BQ(bqnum, bqarridx, name)
         
-        # if name.startswith("DataLength"):
-        #     # DataLengthToken is handled in the sympy_to_node function
-        #     return DataLengthToken(value = len(global_arraylist[0]))
 
         if name.startswith("DataLength_"):
             try:
@@ -102,7 +94,7 @@ def sympy_to_BQ_node(expr):
                 if name.startswith("DataLength_constant"):
                     return DataLengthToken(arrayid = "constant", ingroup = True)
                 arrayid = int(name.split("_")[1])
-                # value는 여기서 global_arraylist 참조하여 설정하거나, None으로 두고 evaluator에서 처리
+    
                 found_array = next((a for a in global_arraylist if a.id == arrayid), None)
                 length_val = len(found_array.data) if found_array else None
                 if length_val is None:
@@ -110,27 +102,26 @@ def sympy_to_BQ_node(expr):
                 return DataLengthToken(arrayid=arrayid, value=length_val)
             except (IndexError, ValueError):
                 print(f"Warning: Could not parse arrayid from symbol name: {name} , this is in group_bq_converter.py")
-                # 오류 처리 또는 기본값 반환
-                return DataLengthToken(arrayid=-1) # 예: 잘못된 ID
+                return DataLengthToken(arrayid=-1) 
 
 
         if isinstance(expr, DataLengthToken):
             symbol_name = f"DataLength_{expr.arrayid}"
-            # token_map에 arrayid 정보를 저장할 필요가 있을 수 있음 (복원 시 사용)
+            
             token_map[symbol_name] = {'type': 'DataLengthToken', 'arrayid': expr.arrayid}
             return symbol_name
 
         if name.startswith("GToken"):
-            # print("GToken detected")
+            
             return GToken(access_index = name.split("_")[1])
         
         print("Warning: Unrecognized symbol name:", name)
 
-        # Otherwise, temporarily handle as Variable(None, 0), needs revision later
+
         return Variable(None, 0)
     
     if isinstance(expr, sympy.Function):
-        # Handle unknown functions as a placeholder
+        
         name = str(expr)
         if name.startswith("GroupBy"):
             group_index = name.split("(")[1].split(",")[0]

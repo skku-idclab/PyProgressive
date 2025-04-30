@@ -1,9 +1,8 @@
 import pyprogressive as pp
-from pyprogressive import each, accum, group, G
+from pyprogressive import G, accum, each, group
+D = pp.array([("A", 1), ("B", 4), ("A", 2), ("C", 3)])
+total = accum(each(D, 1))
+proportions = group(each(D, 0), accum(each(G, 1)) / total)
+program = pp.compile(proportions)
 
-if __name__ == "__main__":  
-    array0 = pp.Array(["A", "B", "B", "C", "A", "A", "A", "B", "A", "A"])
-    count = group(each(array0), accum(1))
-
-    compiled = pp.compile(count)
-    compiled.run(interval = 0, callback = print)
+program.run(interval = 1, callback = print)
