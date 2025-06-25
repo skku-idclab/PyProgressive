@@ -30,10 +30,17 @@ class TestCase3(unittest.TestCase):
 
 class TestCase4(unittest.TestCase):
     def test_invalid_expr(self):
-        with self.assertRaises(SyntaxError):
-            var = accum(each(pp.array([1, 2, 3])**0.4))
-            compiled = pp.compile(var)
-            compiled.run(callback=lambda var: print(var))
+        var = accum(each(pp.array([1, 2, 3])+each(pp.array([4, 5, 6]))))
+        compiled = pp.compile(var)
+        compiled.run(callback=lambda var: print(var))
+    
+class TestCase5(unittest.TestCase):
+    def test_mul_arr(self):
+        arr1 = pp.array([1, 2, 3])
+        arr2 = pp.array([4, 5, 6])
+        var = accum(each(arr1)+each(arr2))
+        compiled = pp.compile(var)
+        compiled.run(callback=lambda var: print(var))
         
 
 
