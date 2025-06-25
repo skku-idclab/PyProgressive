@@ -28,6 +28,14 @@ class TestCase3(unittest.TestCase):
             compiled = pp.compile(var)
             compiled.run(callback=lambda var: print(var))
 
+class TestCase4(unittest.TestCase):
+    def test_invalid_expr(self):
+        with self.assertRaises(SyntaxError):
+            var = accum(each(pp.array([1, 2, 3])**0.4))
+            compiled = pp.compile(var)
+            compiled.run(callback=lambda var: print(var))
+        
+
 
 if __name__ == '__main__':
     unittest.main()
