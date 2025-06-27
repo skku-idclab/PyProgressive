@@ -15,6 +15,63 @@ from .token import DataItemToken, DataLengthToken, GToken
 from .array import global_arraylist
 
 token_map = {}
+
+def node_to_sympy_expr(node):
+    if isinstance(node, int):
+        return sympy.Integer(node)
+    if isinstance(node, float):
+        return sympy.Float(node)
+    if isinstance(node, DataItemToken):
+        symbol_name = "arr_" + str(node.id)
+        token_map[symbol_name] = node
+        return Symbol(symbol_name)
+    if isinstance(node, DataLengthToken):
+        symbol_name = f"DataLength_{node.arrayid}"
+        token_map[symbol_name] = {'type': 'DataLengthToken', 'arrayid': node.arrayid}
+        return Symbol(symbol_name)
+    if isinstance(node, Variable):
+        # Convert expr (in Variable) to sympy expression
+        return node_to_sympy_expr(node.expr)
+    if isinstance(node, BinaryOperationNode):
+        left_expr = node_to_sympy_expr(node.left)
+        right_expr = node_to_sympy_expr(node.right)
+        if isinstance(node, Addition):
+            return sympy.Add(left_expr, right_expr)
+        elif isinstance(node, Subtraction):
+            return sympy.Sub(left_expr, right_expr)
+        elif isinstance(node, Multiplication):
+            return sympy.Mul(left_expr, right_expr)
+        elif isinstance(node, Division):
+            return sympy.Rational(left_expr, right_expr)
+    if isinstance(node, PowerN):
+        base_expr = node_to_sympy_expr(node.base)
+        exp_expr = node_to_sympy_expr(node.exponent)
+        return sympy.Pow(base_expr, exp_expr)
+    if isinstance(node, BQ):
+        symbol_name = f"BQ_{node.name}_{node.array_index}"
+        token_map[symbol_name] = node
+        return Symbol(symbol_name)
+    
+
+    if isinstance(node, GBQ):
+        symbol_name = f"GBQ_{node.name}"
+        token_map[symbol_name] = node
+        return Symbol(symbol_name)
+    if isinstance(node, GroupBy):
+        group_index_expr = node_to_sympy_expr(node.group_index)
+        expr_str = node_to_sympy_expr(node.expr)
+        return sympy.Function("GroupBy")(group_index_expr, node.array_index, expr_str)
+    if isinstance(node, GToken):
+        symbol_name = f"GToken_{node.access_index}"
+        token_map[symbol_name] = node
+        return Symbol(symbol_name)
+    
+    raise TypeError(f"Unsupported node type in node_to_sympy_expr: {type(node)}")
+
+
+
+
+
 def node_to_string(node):
     """
     Convert our Node (including Inplace nodes) into a string
@@ -196,9 +253,7 @@ def flatten_with_sympy(root_node):
     3) sympy.expand
     4) sympy -> Node
     """
-
     expr_str = node_to_string(root_node)
-
     sym_expr = sympify(expr_str)
     expanded_expr = expand(sym_expr)
 

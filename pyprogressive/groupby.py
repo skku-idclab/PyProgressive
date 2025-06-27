@@ -106,7 +106,6 @@ def group_evaluator(var, BQ_group_dict, category = None, index = None, gindex = 
         node.val = category_values
         return category_values
 
-        pass
     # If it's a basic numeric type, return it directly
     if isinstance(node, (int, float)):
         return node
