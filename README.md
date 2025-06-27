@@ -11,6 +11,6 @@ pip install .
 2. Run the test
 
 ```bash
-python tests/loop_test.py
+python tests/test_group.py
 ```
 
