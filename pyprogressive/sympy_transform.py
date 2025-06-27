@@ -48,13 +48,13 @@ def node_to_sympy_expr(node):
         exp_expr = node_to_sympy_expr(node.exponent)
         return sympy.Pow(base_expr, exp_expr)
     if isinstance(node, BQ):
-        symbol_name = f"BQ_{node.name}_{node.array_index}"
+        symbol_name = node.name
         token_map[symbol_name] = node
         return Symbol(symbol_name)
     
 
     if isinstance(node, GBQ):
-        symbol_name = f"GBQ_{node.name}"
+        symbol_name = node.name
         token_map[symbol_name] = node
         return Symbol(symbol_name)
     if isinstance(node, GroupBy):

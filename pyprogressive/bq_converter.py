@@ -60,7 +60,7 @@ def convert_with_bq(root_node, BQ_dict):
     # 4. Finally, convert the resulting sympy expression back to our Node structure and return it
     converted_node = sympy_to_BQ_node(converted_sym_expr)
 
-    converted_expr_sympy = sympy_to_BQ_node(converted_expr_sympy) #
+    converted_expr_sympy_node = sympy_to_BQ_node(converted_expr_sympy) #
 
     bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
     for s in bq_symbols:
