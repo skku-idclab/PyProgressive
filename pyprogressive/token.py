@@ -57,6 +57,9 @@ class DataItemToken():
     
     def __len__(self):
         return len(self.array)
+    
+    def print(self):
+        print("d[i]_"+str(self.id))
         
 
 # length of array, it can be estimated when using groupby

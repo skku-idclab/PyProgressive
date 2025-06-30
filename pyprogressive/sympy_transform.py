@@ -38,11 +38,13 @@ def node_to_sympy_expr(node):
         if isinstance(node, Addition):
             return sympy.Add(left_expr, right_expr)
         elif isinstance(node, Subtraction):
-            return sympy.Sub(left_expr, right_expr)
+            return sympy.Add(left_expr, -right_expr)
         elif isinstance(node, Multiplication):
             return sympy.Mul(left_expr, right_expr)
         elif isinstance(node, Division):
-            return sympy.Rational(left_expr, right_expr)
+            # print("left_expr:", left_expr, "type:", type(left_expr))
+            # print("right_expr:", right_expr)
+            return left_expr / right_expr
     if isinstance(node, PowerN):
         base_expr = node_to_sympy_expr(node.base)
         exp_expr = node_to_sympy_expr(node.exponent)

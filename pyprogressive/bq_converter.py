@@ -71,6 +71,12 @@ def convert_with_bq(root_node, BQ_dict):
     print("BQ symbol 1:", bq_symbols, "BQ symbol 2: ",bq_symbols2)
     print("Converted expression:", BQ_dict)
 
+
+    print("Converted node:")
+    converted_node.print()
+    print("Converted expr sympy node:")
+    converted_expr_sympy_node.print()
+
     return converted_node, BQ_dict
 
 
