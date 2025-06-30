@@ -3,7 +3,7 @@
 import sympy
 from sympy import sympify, simplify, Symbol, expand, Poly, Function, Mul, Pow
 from sympy.core.expr import Expr
-from .sympy_transform import node_to_string, token_map, node_to_sympy_expr
+from .sympy_transform import token_map, node_to_sympy_expr
 from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN, BQ, GroupBy
@@ -36,48 +36,40 @@ def convert_with_bq(root_node, BQ_dict):
     """
     
     # 1. Convert Node → string → sympy expression
-    expr_str = node_to_string(root_node)
     
     expr_sympy = node_to_sympy_expr(root_node) #
 
-    try:
-        sym_expr = sympify(expr_str)
-    except Exception as e:
-        raise ValueError(f"sympify failed: {expr_str}") from e
     
     
     # 2. Expand the expression
-    sym_expr = expand(sym_expr)
-
-    expr_sympy = expand(expr_sympy) #
-
-    # 3. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
-    new_sym_expr = transform_expr(sym_expr)
-    converted_sym_expr = simplify(new_sym_expr)
-
+    expr_sympy = expand(expr_sympy) 
+    expr_sympy = transform_expr(expr_sympy) #
     converted_expr_sympy = simplify(expr_sympy) #
     
     # 4. Finally, convert the resulting sympy expression back to our Node structure and return it
-    converted_node = sympy_to_BQ_node(converted_sym_expr)
 
     converted_expr_sympy_node = sympy_to_BQ_node(converted_expr_sympy) #
 
-    bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
+    # bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
+    # for s in bq_symbols:
+    #     BQ_dict[s.name] = 0
+
+    bq_symbols = [s for s in converted_expr_sympy.atoms(Symbol) if s.name.startswith("BQ_")]
     for s in bq_symbols:
         BQ_dict[s.name] = 0
 
-    bq_symbols2 = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_")]
-
-    print("BQ symbol 1:", bq_symbols, "BQ symbol 2: ",bq_symbols2)
+    print("BQ symbol 2: ",bq_symbols)
     print("Converted expression:", BQ_dict)
 
 
-    print("Converted node:")
-    converted_node.print()
+    # print("Converted node:")
+    # if isinstance(converted_node, Node):
+    #     converted_node.print()
     print("Converted expr sympy node:")
-    converted_expr_sympy_node.print()
+    if isinstance(converted_expr_sympy_node, Node):
+        converted_expr_sympy_node.print()
 
-    return converted_node, BQ_dict
+    return converted_expr_sympy_node, BQ_dict
 
 
 def sympy_to_BQ_node(expr):

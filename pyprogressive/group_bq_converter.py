@@ -1,7 +1,7 @@
 import sympy
 from sympy import sympify, simplify, Symbol, expand, Mul
 from sympy.core.expr import Expr
-from .sympy_transform import node_to_string, token_map
+from .sympy_transform import token_map, node_to_sympy_expr
 from .expression import (
     Node, BinaryOperationNode, Addition, Subtraction,
     Multiplication, Division, PowerN, BQ, GroupBy, GBQ
@@ -32,32 +32,19 @@ def group_convert_with_bq(root_node, BQ_dict):
     Returns:
         Node: The converted expression tree with BQ expansion applied.
     """
-    
-    # 1. Convert Node → string → sympy expression
-    expr_str = node_to_string(root_node)
-    try:
-        sym_expr = sympify(expr_str)
-    except Exception as e:
-        raise ValueError(f"sympify failed: {expr_str}") from e
 
-    # 2. Expand the expression
-    sym_expr = expand(sym_expr)
-
-    # 3. DataItemToken replacement: in the flatten phase, items expressed as "arr_i" are treated as a polynomial term.
-
-    new_sym_expr = transform_expr(sym_expr)
-
-    converted_sym_expr = simplify(new_sym_expr)
-
-    # 4. Finally, convert the resulting sympy expression back to our Node structure and return it
-    converted_node = sympy_to_BQ_node(converted_sym_expr)
-
+    sympy_expr = node_to_sympy_expr(root_node)
+    sympy_expr = expand(sympy_expr)
+    new_sympy_expr = transform_expr(sympy_expr)
+    new_sym_expr = simplify(new_sympy_expr)
+    converted_sym_expr = sympy_to_BQ_node(new_sym_expr)
     bq_symbols = [s for s in new_sym_expr.atoms(Symbol) if s.name.startswith("BQ_") or s.name.startswith("GBQ_")]
     for s in bq_symbols:
         BQ_dict[s.name] = 0
+    return converted_sym_expr, BQ_dict
 
-    return converted_node, BQ_dict
-
+    
+   
 
 def sympy_to_BQ_node(expr):
     """

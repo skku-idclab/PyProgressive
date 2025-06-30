@@ -74,79 +74,6 @@ def node_to_sympy_expr(node):
 
 
 
-def node_to_string(node):
-    """
-    Convert our Node (including Inplace nodes) into a string
-    that sympy can parse.
-    """
-    # 1) base type(int, float)
-    if isinstance(node, int):
-        return str(node)
-    if isinstance(node, float):
-        return str(node)
-
-    # 2) Token or Variable?
-    if isinstance(node, DataItemToken):
-
-
-        symbol_name = "arr_" + str(node.id)
-
-        token_map[symbol_name] = node
-        return symbol_name  # ex: array[i] -> arr_123
-    
-    
-    if isinstance(node, DataLengthToken):
-        symbol_name = f"DataLength_{node.arrayid}"
-        token_map[symbol_name] = {'type': 'DataLengthToken', 'arrayid': node.arrayid}
-        return symbol_name
-
-    if isinstance(node, Variable):
-        # Convert expr (in Variable) to string
-        return f"({node_to_string(node.expr)})"
-
-    # 3) BinaryOperationNode (Addition, Subtraction, ...)
-    if isinstance(node, BinaryOperationNode):
-        left_str = node_to_string(node.left)
-        right_str = node_to_string(node.right)
-        if isinstance(node, Addition):
-            return f"({left_str} + {right_str})"
-        elif isinstance(node, Subtraction):
-            return f"({left_str} - {right_str})"
-        elif isinstance(node, Multiplication):
-            return f"({left_str} * {right_str})"
-        elif isinstance(node, Division):
-            return f"({left_str} / {right_str})"
-
-    # 4) PowerN
-    if isinstance(node, PowerN):
-        base_str = node_to_string(node.base)
-        exp_str = node_to_string(node.exponent)
-        return f"({base_str} ** {exp_str})"
-
-    # 5) BQ
-    if isinstance(node, BQ):
-        return node.name
-    
-    if isinstance(node, GBQ):
-        return node.name
-    
-    # 6) GroupBy
-    # GroupBy is a special case, we need to handle it separately
-    if isinstance(node, GroupBy):
-        group_index_str = node_to_string(node.group_index)
-        expr_str = node_to_string(node.expr)
-        array_index = node.array_index
-        return f"GroupBy({group_index_str}, {array_index}, {expr_str})"
-    
-    if isinstance(node, GToken):
-        return "arr_GToken"
-    
-    
-
-
-    raise TypeError(f"Unsupported node type in node_to_string: {type(node)}")
-
-
 def sympy_to_node(expr):
     """
     Convert Sympy expression back to our Node structure.
@@ -255,8 +182,8 @@ def flatten_with_sympy(root_node):
     3) sympy.expand
     4) sympy -> Node
     """
-    expr_str = node_to_string(root_node)
-    sym_expr = sympify(expr_str)
+    sym_expr = node_to_sympy_expr(root_node)
+    sym_expr = sympify(sym_expr)
     expanded_expr = expand(sym_expr)
 
     new_root_node = sympy_to_node(expanded_expr)

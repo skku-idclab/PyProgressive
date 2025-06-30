@@ -17,7 +17,7 @@ class DataItemToken():
         self.index = index # this is for tuple array
 
     def __str__(self):
-        return "d[i]_"+str(self.id)
+        return "arr_"+str(self.id)
     
     def __add__(self, other):
         # d[i] + other => Addition(self, other)
@@ -59,7 +59,7 @@ class DataItemToken():
         return len(self.array)
     
     def print(self):
-        print("d[i]_"+str(self.id))
+        print("arr_"+str(self.id))
         
 
 # length of array, it can be estimated when using groupby
