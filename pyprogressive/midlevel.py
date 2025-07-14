@@ -140,7 +140,20 @@ def group(group_index_item, expr):
 class Program:
     def __init__(self, *args):
         self.args = args
-    def run(self, interval=1, callback=None, tau = 0.99):
+    def _update_bqs_with_chunk(self, BQ_dict, idx, chunk_count):
+        for keys in BQ_dict.keys():
+            if keys.split("_")[1] == "group":
+                pass
+            if keys.split("_")[1] == "special":
+                arr1id, pow1 = keys.split("_")[2], keys.split("_")[4]
+                arr2id, pow2 = keys.split("_")[6], keys.split("_")[8]
+                operator  = keys.split("_")[5]
+
+        pass
+
+
+
+    def run(self, interval=1, callback=None, tau = 0.99, chunk_count = 1):
         
 
         for array in global_arraylist:
