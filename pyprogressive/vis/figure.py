@@ -3,8 +3,7 @@ import threading
 try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
-    import ipywidgets as widgets
-    from IPython.display import display, clear_output
+    from IPython.display import display
     _DEPS_AVAILABLE = True
 except ImportError:
     _DEPS_AVAILABLE = False
@@ -22,36 +21,29 @@ class ProgressiveFigure:
     """
     A figure containing one or more ProgressiveAxes subplots.
 
-    Analogous to a matplotlib Figure.  Created by pp.viz.subplots().
+    Analogous to a matplotlib Figure.  Created by pp.vis.subplots().
 
     After binding variables to axes, call fig.run(program, interval) to
     start progressive computation and live chart updates.
     """
 
     def __init__(self, rows, cols, axes_grid):
-        """
-        Args:
-            rows, cols:  subplot grid dimensions
-            axes_grid:   List[List[ProgressiveAxes]]  (2-D, row-major)
-        """
         self._rows = rows
         self._cols = cols
-        self._axes = axes_grid   # _axes[r][c]
-        self._output = None
+        self._axes = axes_grid
+        self._display_handle = None
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     def _flat_axes(self):
-        """Return all axes in row-major order."""
         return [ax for row in self._axes for ax in row]
 
     def _build_figure(self, done):
         flat = self._flat_axes()
-
-        # subplot_titles: one entry per cell (empty string = no title)
         subplot_titles = [ax._title or "" for ax in flat]
+        has_bar = any(ax._has_bar() for ax in flat)
 
         fig = make_subplots(
             rows=self._rows,
@@ -67,9 +59,30 @@ class ProgressiveFigure:
             if ax._ylabel:
                 fig.update_yaxes(title_text=ax._ylabel, row=ax._row, col=ax._col)
 
+        layout_kwargs = {}
+        if has_bar:
+            layout_kwargs["barmode"] = "group"
         if done:
-            fig.update_layout(title_text="(done)")
+            layout_kwargs["title_text"] = "(done)"
+        if layout_kwargs:
+            fig.update_layout(**layout_kwargs)
 
+        return fig
+
+    def _build_empty_figure(self):
+        """Initial placeholder figure shown before first callback tick."""
+        flat = self._flat_axes()
+        subplot_titles = [ax._title or "" for ax in flat]
+        fig = make_subplots(
+            rows=self._rows,
+            cols=self._cols,
+            subplot_titles=subplot_titles,
+        )
+        for ax in flat:
+            if ax._xlabel:
+                fig.update_xaxes(title_text=ax._xlabel, row=ax._row, col=ax._col)
+            if ax._ylabel:
+                fig.update_yaxes(title_text=ax._ylabel, row=ax._row, col=ax._col)
         return fig
 
     def _update(self, t, done, var_index, *results):
@@ -78,9 +91,7 @@ class ProgressiveFigure:
             ax._append(t, var_index, results)
 
         fig = self._build_figure(done)
-        with self._output:
-            clear_output(wait=True)
-            display(fig)
+        self._display_handle.update(fig)
 
     # ------------------------------------------------------------------
     # Public API
@@ -88,19 +99,14 @@ class ProgressiveFigure:
 
     def run(self, program, interval=0.5):
         """
-        Start progressive computation and live chart updates.
-
-        Args:
-            program:  pp.compile(...) result
-            interval: minimum seconds of computation between chart updates
+        Display the chart and start progressive computation in a background thread.
+        The cell returns immediately; the single chart updates in-place.
         """
         _require_deps()
         from ._runner import _make_callback
 
-        # Build variable → result-index map
         var_index = {id(v): i for i, v in enumerate(program.args)}
 
-        # Validate: every bound variable must be in program.args
         for ax in self._flat_axes():
             for var in ax._get_all_vars():
                 if id(var) not in var_index:
@@ -111,8 +117,8 @@ class ProgressiveFigure:
                         f"compile() and ax.line() / ax.scatter()."
                     )
 
-        self._output = widgets.Output()
-        display(self._output)
+        # Display placeholder once — subsequent updates replace it in-place
+        self._display_handle = display(self._build_empty_figure(), display_id=True)
 
         n_vars = len(program.args)
 

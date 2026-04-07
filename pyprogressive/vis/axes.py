@@ -9,10 +9,10 @@ class ProgressiveAxes:
     """
     A single subplot panel, analogous to a matplotlib Axes.
 
-    Bind progressive variables with line() or scatter(), then configure
+    Bind progressive variables with line(), scatter(), or bar(), then configure
     with set_title / set_xlabel / set_ylabel before calling fig.run().
 
-    Users never instantiate this directly — use pp.viz.subplots() instead.
+    Users never instantiate this directly — use pp.vis.subplots() instead.
     """
 
     def __init__(self, row, col):
@@ -32,6 +32,10 @@ class ProgressiveAxes:
 
         # [{x_var, y_var, history_x, history_y}]
         self._scatter_bindings = []
+
+        # [{var, label, current_val}]
+        # current_val is a dict (GroupBy) or float (scalar) — bar shows latest snapshot only
+        self._bar_bindings = []
 
     # ------------------------------------------------------------------
     # Public configuration API
@@ -68,6 +72,27 @@ class ProgressiveAxes:
             "history_y": [],
         })
 
+    def bar(self, var, label=None):
+        """
+        Bind a progressive variable as a bar chart (current-value snapshot).
+
+        Two modes depending on the variable type at runtime:
+        - GroupBy variable  → x = group keys, y = group values
+          e.g. group_mean gives {'A': 3.0, 'B': 2.5} → bars per group
+        - Scalar variable   → a single bar showing the current value
+
+        Calling bar() multiple times on the same axes adds grouped series.
+
+        Args:
+            var:   a PyProgressive variable (same object passed to compile())
+            label: bar series label (optional)
+        """
+        self._bar_bindings.append({
+            "var": var,
+            "label": label,
+            "current_val": None,   # updated each tick; None until first callback
+        })
+
     def set_title(self, text):
         self._title = text
 
@@ -89,7 +114,12 @@ class ProgressiveAxes:
         for b in self._scatter_bindings:
             vars_.append(b["x_var"])
             vars_.append(b["y_var"])
+        for b in self._bar_bindings:
+            vars_.append(b["var"])
         return vars_
+
+    def _has_bar(self):
+        return len(self._bar_bindings) > 0
 
     def _append(self, t, var_index, results):
         """
@@ -112,25 +142,30 @@ class ProgressiveAxes:
             b["history_x"].append(float(results[xi]))
             b["history_y"].append(float(results[yi]))
 
+        for b in self._bar_bindings:
+            raw = results[var_index[id(b["var"])]]
+            # keep as dict (GroupBy) or convert to float (scalar)
+            b["current_val"] = raw if isinstance(raw, dict) else float(raw)
+
     def _build_traces(self):
         """
-        Return a list of go.Scatter traces for this axes.
+        Return a list of traces (go.Scatter or go.Bar) for this axes.
         Called by ProgressiveFigure._build_figure() on every tick.
         """
         traces = []
 
+        # --- line traces ---
         for i, b in enumerate(self._line_bindings):
             lbl = b["label"] if b["label"] is not None else f"var{i}"
-            # filter out None values (GroupBy) to avoid plotly gaps
             valid = [(t, v) for t, v in zip(self._history_t, b["history_v"]) if v is not None]
             xs = [p[0] for p in valid]
             ys = [p[1] for p in valid]
             traces.append(go.Scatter(x=xs, y=ys, mode="lines", name=lbl))
 
+        # --- scatter traces ---
         for b in self._scatter_bindings:
             hx = b["history_x"]
             hy = b["history_y"]
-            # trajectory
             traces.append(go.Scatter(
                 x=list(hx), y=list(hy),
                 mode="lines",
@@ -138,7 +173,6 @@ class ProgressiveAxes:
                 line=dict(color="lightblue", width=1.5),
                 showlegend=False,
             ))
-            # current point
             if hx:
                 traces.append(go.Scatter(
                     x=[hx[-1]], y=[hy[-1]],
@@ -147,5 +181,21 @@ class ProgressiveAxes:
                     marker=dict(color="crimson", size=10),
                     showlegend=False,
                 ))
+
+        # --- bar traces ---
+        for i, b in enumerate(self._bar_bindings):
+            val = b["current_val"]
+            if val is None:
+                continue
+            lbl = b["label"] if b["label"] is not None else f"bar{i}"
+            if isinstance(val, dict):
+                # GroupBy: x = group keys, y = group values
+                x_vals = [str(k) for k in val.keys()]
+                y_vals = list(val.values())
+            else:
+                # Scalar: single bar
+                x_vals = [lbl]
+                y_vals = [val]
+            traces.append(go.Bar(x=x_vals, y=y_vals, name=lbl))
 
         return traces

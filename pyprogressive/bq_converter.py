@@ -58,16 +58,16 @@ def convert_with_bq(root_node, BQ_dict):
     for s in bq_symbols:
         BQ_dict[s.name] = 0
 
-    print("BQ symbol 2: ",bq_symbols)
-    print("Converted expression:", BQ_dict)
+    #print("BQ symbol 2: ",bq_symbols)
+    #print("Converted expression:", BQ_dict)
 
 
     # print("Converted node:")
     # if isinstance(converted_node, Node):
     #     converted_node.print()
-    print("Converted expr sympy node:")
-    if isinstance(converted_expr_sympy_node, Node):
-        converted_expr_sympy_node.print()
+    #print("Converted expr sympy node:")
+    #if isinstance(converted_expr_sympy_node, Node):
+    #    converted_expr_sympy_node.print()
 
     return converted_expr_sympy_node, BQ_dict
 

@@ -2,8 +2,7 @@ import threading
 
 try:
     import plotly.graph_objects as go
-    import ipywidgets as widgets
-    from IPython.display import display, clear_output
+    from IPython.display import display
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -12,8 +11,7 @@ except ImportError:
 def _require_deps():
     if not _PLOTLY_AVAILABLE:
         raise ImportError(
-            "plotly and ipywidgets are required. "
-            "Install with: pip install plotly ipywidgets"
+            "plotly is required. Install with: pip install plotly"
         )
 
 
@@ -21,13 +19,7 @@ class ProgressiveLineChart:
     """
     Progressive line chart: x = elapsed time, each variable is one line.
 
-    Computation runs in a background thread so the cell returns immediately
-    and Jupyter can render each update in real-time.
-
-    Usage::
-
-        chart = ProgressiveLineChart(labels=["mean", "var"], title="My Stats")
-        chart.run(program, interval=0.5)
+    The chart is displayed once and updated in-place on each callback tick.
     """
 
     def __init__(self, labels=None, title="Progressive Chart"):
@@ -36,11 +28,7 @@ class ProgressiveLineChart:
         self._history_t = []
         self._history_v = []
         self._n_vars = None
-        self._output = None
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
+        self._display_handle = None
 
     def _build_figure(self, done):
         labels = self.labels if self.labels is not None else [
@@ -66,8 +54,20 @@ class ProgressiveLineChart:
             ),
         )
 
+    def _build_empty_figure(self):
+        labels = self.labels if self.labels is not None else [
+            f"var{i}" for i in range(self._n_vars)
+        ]
+        return go.Figure(
+            data=[go.Scatter(x=[], y=[], mode="lines", name=lbl) for lbl in labels],
+            layout=go.Layout(
+                title=dict(text=self.title),
+                xaxis=dict(title="Elapsed Time (s)"),
+                yaxis=dict(title="Value"),
+            ),
+        )
+
     def _update(self, t, done, *values):
-        """Called by ProgressiveRunner on every callback tick (background thread)."""
         scalar_values = []
         for v in values:
             if isinstance(v, dict):
@@ -85,34 +85,21 @@ class ProgressiveLineChart:
         for i, v in enumerate(scalar_values):
             self._history_v[i].append(v)
 
-        fig = self._build_figure(done)
-        with self._output:
-            clear_output(wait=True)
-            display(fig)
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        self._display_handle.update(self._build_figure(done))
 
     def run(self, program, interval=0.5):
-        """
-        Display the chart and start computation in a background thread.
-        The cell returns immediately; updates appear in real-time.
-        The chart title changes to '(done)' when computation is complete.
-        """
         _require_deps()
         from ._runner import ProgressiveRunner
 
         self._n_vars = len(program.args)
         self._history_t = []
         self._history_v = [[] for _ in range(self._n_vars)]
-        self._output = widgets.Output()
-        display(self._output)
+        self._display_handle = display(self._build_empty_figure(), display_id=True)
 
-        def _run():
-            ProgressiveRunner(program, self).run(interval)
-
-        thread = threading.Thread(target=_run, daemon=True)
+        thread = threading.Thread(
+            target=lambda: ProgressiveRunner(program, self).run(interval),
+            daemon=True,
+        )
         thread.start()
 
 
@@ -120,17 +107,8 @@ class ProgressiveScatterChart:
     """
     Progressive scatter chart for exactly 2 variables.
 
-    Shows the convergence trajectory: as more data is processed the point
-    (var0, var1) drifts toward its final value. The trajectory is drawn as
-    a faint line; the current position is highlighted as a marker.
-
-    Computation runs in a background thread so the cell returns immediately
-    and Jupyter can render each update in real-time.
-
-    Usage::
-
-        chart = ProgressiveScatterChart(x_label="Cov(X,Y)", y_label="Var(X)")
-        chart.run(program, interval=0.5)
+    Shows the convergence trajectory as the two estimates drift toward
+    their final values. The chart is displayed once and updated in-place.
     """
 
     def __init__(self, x_label="X", y_label="Y", title="Progressive Scatter"):
@@ -139,11 +117,7 @@ class ProgressiveScatterChart:
         self.title = title
         self._history_x = []
         self._history_y = []
-        self._output = None
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
+        self._display_handle = None
 
     def _build_figure(self, done):
         title_text = f"{self.title}  (done)" if done else self.title
@@ -171,26 +145,27 @@ class ProgressiveScatterChart:
             ),
         )
 
+    def _build_empty_figure(self):
+        return go.Figure(
+            data=[
+                go.Scatter(x=[], y=[], mode="lines", name="trajectory",
+                           line=dict(color="lightblue", width=1.5)),
+                go.Scatter(x=[], y=[], mode="markers", name="current",
+                           marker=dict(color="crimson", size=10)),
+            ],
+            layout=go.Layout(
+                title=dict(text=self.title),
+                xaxis=dict(title=self.x_label),
+                yaxis=dict(title=self.y_label),
+            ),
+        )
+
     def _update(self, t, done, x_val, y_val):
-        """Called by ProgressiveRunner on every callback tick (background thread)."""
         self._history_x.append(float(x_val))
         self._history_y.append(float(y_val))
-
-        fig = self._build_figure(done)
-        with self._output:
-            clear_output(wait=True)
-            display(fig)
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        self._display_handle.update(self._build_figure(done))
 
     def run(self, program, interval=0.5):
-        """
-        Display the chart and start computation in a background thread.
-        The cell returns immediately; updates appear in real-time.
-        The chart title changes to '(done)' when computation is complete.
-        """
         _require_deps()
         from ._runner import ProgressiveRunner
 
@@ -201,11 +176,10 @@ class ProgressiveScatterChart:
             )
         self._history_x = []
         self._history_y = []
-        self._output = widgets.Output()
-        display(self._output)
+        self._display_handle = display(self._build_empty_figure(), display_id=True)
 
-        def _run():
-            ProgressiveRunner(program, self).run(interval)
-
-        thread = threading.Thread(target=_run, daemon=True)
+        thread = threading.Thread(
+            target=lambda: ProgressiveRunner(program, self).run(interval),
+            daemon=True,
+        )
         thread.start()
