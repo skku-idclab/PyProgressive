@@ -7,6 +7,9 @@ setup(
     version='0.1',
     packages=find_packages(),
     install_requires=[
-        'sympy'
+        'sympy',
+        'plotly',
+        'anywidget',
+        'ipywidgets',
     ]
 )
