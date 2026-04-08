@@ -2,7 +2,8 @@ import threading
 
 try:
     import plotly.graph_objects as go
-    from IPython.display import display
+    import plotly.io as pio
+    from IPython.display import display, HTML
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -13,6 +14,10 @@ def _require_deps():
         raise ImportError(
             "plotly is required. Install with: pip install plotly"
         )
+
+
+def _fig_to_html(fig):
+    return HTML(pio.to_html(fig, full_html=False, include_plotlyjs="cdn"))
 
 
 class ProgressiveLineChart:
@@ -85,7 +90,7 @@ class ProgressiveLineChart:
         for i, v in enumerate(scalar_values):
             self._history_v[i].append(v)
 
-        self._display_handle.update(self._build_figure(done))
+        self._display_handle.update(_fig_to_html(self._build_figure(done)))
 
     def run(self, program, interval=0.5):
         _require_deps()
@@ -94,7 +99,10 @@ class ProgressiveLineChart:
         self._n_vars = len(program.args)
         self._history_t = []
         self._history_v = [[] for _ in range(self._n_vars)]
-        self._display_handle = display(self._build_empty_figure(), display_id=True)
+        self._display_handle = display(
+            _fig_to_html(self._build_empty_figure()),
+            display_id=True,
+        )
 
         thread = threading.Thread(
             target=lambda: ProgressiveRunner(program, self).run(interval),
@@ -163,7 +171,7 @@ class ProgressiveScatterChart:
     def _update(self, t, done, x_val, y_val):
         self._history_x.append(float(x_val))
         self._history_y.append(float(y_val))
-        self._display_handle.update(self._build_figure(done))
+        self._display_handle.update(_fig_to_html(self._build_figure(done)))
 
     def run(self, program, interval=0.5):
         _require_deps()
@@ -176,7 +184,10 @@ class ProgressiveScatterChart:
             )
         self._history_x = []
         self._history_y = []
-        self._display_handle = display(self._build_empty_figure(), display_id=True)
+        self._display_handle = display(
+            _fig_to_html(self._build_empty_figure()),
+            display_id=True,
+        )
 
         thread = threading.Thread(
             target=lambda: ProgressiveRunner(program, self).run(interval),

@@ -259,7 +259,10 @@ class Program:
                     var.val = group_evaluator(var, BQ_group_dict, index = idx, gindex = array_index, normal_BQ_dict= BQ_dict)
                     results.append(var.val)
                 else:
-                    result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))
+                    try:
+                        result = evaluate(var, BQ_dict, length = len(global_arraylist[0]))
+                    except Exception:
+                        result = float('nan')
                     var.val = result
                     results.append(result)
             

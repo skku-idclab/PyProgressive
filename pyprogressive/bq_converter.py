@@ -267,6 +267,12 @@ def transform_expr(expr: Expr) -> Expr:
             if match and exponent.is_Integer:
                 exp_val = exponent if exponent is not None else 1
                 return Mul(1 ,Symbol(f'BQ_{exp_val}_of_{match.group(1)}'))
+            elif match and (exponent.is_Float or exponent.is_Rational):
+                raise ValueError(
+                    f"Fractional exponents on loop variables (each(arr)**{exponent}) are not "
+                    "supported. Apply pp.sqrt() to a compiled variable instead, "
+                    "e.g., pp.sqrt(var_x)."
+                )
         new_base = transform_expr(base)
         new_exponent = transform_expr(exponent)
         return new_base ** new_exponent

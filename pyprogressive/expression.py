@@ -38,10 +38,10 @@ class Node:
         return Division(other, self)
 
     def __pow__(self, other):
-        if isinstance(other, int) and other > 0:
+        if isinstance(other, (int, float)) and other > 0:
             return PowerN(self, other)
 
-        raise ValueError("Only positive integer exponents are supported")
+        raise ValueError("Only positive numeric exponents are supported")
 
     def print(self, level=0):
         print_tree(self, level)

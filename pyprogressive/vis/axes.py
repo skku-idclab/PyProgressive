@@ -1,8 +1,19 @@
+import math
+
 try:
     import plotly.graph_objects as go
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
+
+
+def _to_finite_float(raw):
+    """Convert raw to float, returning None for NaN, Inf, complex, or any error."""
+    try:
+        val = float(raw)
+        return None if not math.isfinite(val) else val
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 class ProgressiveAxes:
@@ -134,18 +145,18 @@ class ProgressiveAxes:
 
         for b in self._line_bindings:
             raw = results[var_index[id(b["var"])]]
-            b["history_v"].append(None if isinstance(raw, dict) else float(raw))
+            b["history_v"].append(None if isinstance(raw, dict) else _to_finite_float(raw))
 
         for b in self._scatter_bindings:
             xi = var_index[id(b["x_var"])]
             yi = var_index[id(b["y_var"])]
-            b["history_x"].append(float(results[xi]))
-            b["history_y"].append(float(results[yi]))
+            b["history_x"].append(_to_finite_float(results[xi]))
+            b["history_y"].append(_to_finite_float(results[yi]))
 
         for b in self._bar_bindings:
             raw = results[var_index[id(b["var"])]]
             # keep as dict (GroupBy) or convert to float (scalar)
-            b["current_val"] = raw if isinstance(raw, dict) else float(raw)
+            b["current_val"] = raw if isinstance(raw, dict) else _to_finite_float(raw)
 
     def _build_traces(self):
         """
@@ -166,16 +177,19 @@ class ProgressiveAxes:
         for b in self._scatter_bindings:
             hx = b["history_x"]
             hy = b["history_y"]
+            valid = [(x, y) for x, y in zip(hx, hy) if x is not None and y is not None]
+            vx = [p[0] for p in valid]
+            vy = [p[1] for p in valid]
             traces.append(go.Scatter(
-                x=list(hx), y=list(hy),
+                x=vx, y=vy,
                 mode="lines",
                 name="trajectory",
                 line=dict(color="lightblue", width=1.5),
                 showlegend=False,
             ))
-            if hx:
+            if vx:
                 traces.append(go.Scatter(
-                    x=[hx[-1]], y=[hy[-1]],
+                    x=[vx[-1]], y=[vy[-1]],
                     mode="markers",
                     name="current",
                     marker=dict(color="crimson", size=10),

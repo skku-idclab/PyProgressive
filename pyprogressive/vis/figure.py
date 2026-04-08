@@ -2,8 +2,9 @@ import threading
 
 try:
     import plotly.graph_objects as go
+    import plotly.io as pio
     from plotly.subplots import make_subplots
-    from IPython.display import display
+    from IPython.display import display, HTML
     _DEPS_AVAILABLE = True
 except ImportError:
     _DEPS_AVAILABLE = False
@@ -17,14 +18,15 @@ def _require_deps():
         )
 
 
+def _fig_to_html(fig):
+    return HTML(pio.to_html(fig, full_html=False, include_plotlyjs="cdn"))
+
+
 class ProgressiveFigure:
     """
     A figure containing one or more ProgressiveAxes subplots.
 
-    Analogous to a matplotlib Figure.  Created by pp.vis.subplots().
-
-    After binding variables to axes, call fig.run(program, interval) to
-    start progressive computation and live chart updates.
+    Displayed as a single output that updates in-place on each callback tick.
     """
 
     def __init__(self, rows, cols, axes_grid):
@@ -70,7 +72,6 @@ class ProgressiveFigure:
         return fig
 
     def _build_empty_figure(self):
-        """Initial placeholder figure shown before first callback tick."""
         flat = self._flat_axes()
         subplot_titles = [ax._title or "" for ax in flat]
         fig = make_subplots(
@@ -89,9 +90,7 @@ class ProgressiveFigure:
         """Called per tick by the background thread."""
         for ax in self._flat_axes():
             ax._append(t, var_index, results)
-
-        fig = self._build_figure(done)
-        self._display_handle.update(fig)
+        self._display_handle.update(_fig_to_html(self._build_figure(done)))
 
     # ------------------------------------------------------------------
     # Public API
@@ -99,8 +98,8 @@ class ProgressiveFigure:
 
     def run(self, program, interval=0.5):
         """
-        Display the chart and start progressive computation in a background thread.
-        The cell returns immediately; the single chart updates in-place.
+        Display one chart and start progressive computation in a background
+        thread.  The chart updates in-place; only one chart is ever visible.
         """
         _require_deps()
         from ._runner import _make_callback
@@ -117,8 +116,10 @@ class ProgressiveFigure:
                         f"compile() and ax.line() / ax.scatter()."
                     )
 
-        # Display placeholder once — subsequent updates replace it in-place
-        self._display_handle = display(self._build_empty_figure(), display_id=True)
+        self._display_handle = display(
+            _fig_to_html(self._build_empty_figure()),
+            display_id=True,
+        )
 
         n_vars = len(program.args)
 
