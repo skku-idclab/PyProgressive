@@ -407,6 +407,9 @@ class ProgressiveAxes:
     def _has_bar(self):
         return len(self._bar_bindings) > 0
 
+    def _has_pie(self):
+        return len(self._pie_bindings) > 0
+
     def _get_shapes(self, xref, yref):
         """Return Plotly shape dicts for axhline / axvline on this subplot.
 

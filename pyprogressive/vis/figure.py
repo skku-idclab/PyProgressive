@@ -87,11 +87,26 @@ class ProgressiveFigure:
     def _flat_axes(self):
         return [ax for row in self._axes for ax in row]
 
+    def _build_specs(self):
+        """Return subplot specs for make_subplots.
+
+        Pie axes need {"type": "pie"}; everything else uses the default {"type": "xy"}.
+        """
+        return [
+            [
+                {"type": "pie"} if self._axes[r][c]._has_pie() else {"type": "xy"}
+                for c in range(self._cols)
+            ]
+            for r in range(self._rows)
+        ]
+
     def _collect_shapes(self):
-        """Gather axhline / axvline shapes from every subplot axes."""
+        """Gather axhline / axvline shapes from every non-pie subplot axes."""
         shapes = []
         flat = self._flat_axes()
         for i, ax in enumerate(flat):
+            if ax._has_pie():
+                continue  # pie subplots have no xy axes — skip
             subplot_idx = i + 1
             xref = "x" if subplot_idx == 1 else f"x{subplot_idx}"
             yref = "y" if subplot_idx == 1 else f"y{subplot_idx}"
@@ -120,6 +135,8 @@ class ProgressiveFigure:
             fig.update_layout(**layout_kwargs)
 
         for ax in flat:
+            if ax._has_pie():
+                continue  # no y-axis on pie subplots
             if ax._ylim is not None:
                 fig.update_yaxes(range=list(ax._ylim), row=ax._row, col=ax._col)
 
@@ -133,10 +150,13 @@ class ProgressiveFigure:
             rows=self._rows,
             cols=self._cols,
             subplot_titles=subplot_titles,
+            specs=self._build_specs(),
         )
         for ax in flat:
             for trace in ax._build_traces():
                 fig.add_trace(trace, row=ax._row, col=ax._col)
+            if ax._has_pie():
+                continue  # pie subplots have no x/y axes to label
             if ax._xlabel:
                 fig.update_xaxes(title_text=ax._xlabel, row=ax._row, col=ax._col)
             if ax._ylabel:
@@ -156,8 +176,11 @@ class ProgressiveFigure:
             rows=self._rows,
             cols=self._cols,
             subplot_titles=subplot_titles,
+            specs=self._build_specs(),
         )
         for ax in flat:
+            if ax._has_pie():
+                continue  # pie subplots have no x/y axes to label
             if ax._xlabel:
                 fig.update_xaxes(title_text=ax._xlabel, row=ax._row, col=ax._col)
             if ax._ylabel:
