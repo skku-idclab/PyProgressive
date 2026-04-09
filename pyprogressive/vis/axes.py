@@ -7,6 +7,42 @@ except ImportError:
     _PLOTLY_AVAILABLE = False
 
 
+# ---------------------------------------------------------------------------
+# CI helpers
+# ---------------------------------------------------------------------------
+
+_Z_SCORES = {0.90: 1.645, 0.95: 1.960, 0.99: 2.576}
+
+
+def _z_score(ci):
+    if ci in _Z_SCORES:
+        return _Z_SCORES[ci]
+    raise ValueError(
+        f"Unsupported confidence level: {ci}. "
+        f"Supported values: {sorted(_Z_SCORES.keys())}"
+    )
+
+
+def _ci_half(ci_level, var_val, n_val):
+    """Return CI half-width (float or dict), or None when inputs are invalid."""
+    z = _z_score(ci_level)
+    if isinstance(var_val, dict) and isinstance(n_val, dict):
+        result = {}
+        for k in var_val:
+            if k in n_val:
+                v, cnt = var_val[k], n_val[k]
+                if v is not None and cnt is not None and v >= 0 and cnt > 0:
+                    result[k] = z * math.sqrt(v) / math.sqrt(cnt)
+        return result if result else None
+    try:
+        v, cnt = float(var_val), float(n_val)
+        if v < 0 or cnt <= 0:
+            return None
+        return z * math.sqrt(v) / math.sqrt(cnt)
+    except Exception:
+        return None
+
+
 def _to_finite_float(raw):
     """Convert raw to float, returning None for NaN, Inf, complex, or any error."""
     try:
@@ -15,6 +51,10 @@ def _to_finite_float(raw):
     except (TypeError, ValueError, OverflowError):
         return None
 
+
+# ---------------------------------------------------------------------------
+# ProgressiveAxes
+# ---------------------------------------------------------------------------
 
 class ProgressiveAxes:
     """
@@ -27,54 +67,65 @@ class ProgressiveAxes:
     """
 
     def __init__(self, row, col):
-        # 1-based grid position (Plotly convention)
         self._row = row
         self._col = col
 
         self._title = None
         self._xlabel = None
         self._ylabel = None
-        self._ylim = None   # (ymin, ymax) or None
+        self._ylim = None
 
-        # shared time axis for all line bindings on this axes
         self._history_t = []
-
-        # [{var, label, history_v, style}]
         self._line_bindings = []
-
-        # [{x_var, y_var, history_x, history_y}]
         self._scatter_bindings = []
-
-        # [{var, label, current_val, style}]
         self._bar_bindings = []
 
     # ------------------------------------------------------------------
     # Public configuration API
     # ------------------------------------------------------------------
 
-    def line(self, var, label=None, color=None, linewidth=None, linestyle=None):
+    def line(self, var, label=None, color=None, linewidth=None, linestyle=None,
+             ci=None, variance=None, n=None):
         """
         Bind a progressive variable as a line on this axes.
-        x-axis = elapsed computation time, y-axis = variable value.
 
         Args:
-            var:       a PyProgressive variable (same object passed to compile())
+            var:       PyProgressive variable (same object passed to compile())
             label:     legend label (optional)
-            color:     line color, any CSS/hex string e.g. "red", "#1f77b4" (optional)
+            color:     CSS/hex color string (optional)
             linewidth: line width in pixels (optional)
             linestyle: "solid" | "dot" | "dash" | "longdash" | "dashdot" (optional)
+            ci:        confidence level — 0.90, 0.95, or 0.99 (optional).
+                       When set, draws a fill band around the line.
+                       Requires variance= and n=.
+            variance:  variance variable compiled alongside var (required when ci is set)
+            n:         sample-count variable compiled alongside var (required when ci is set)
         """
+        if ci is not None:
+            if variance is None or n is None:
+                raise ValueError(
+                    "ci= requires variance= and n= to be passed as well.\n"
+                    "Example:\n"
+                    "  count = accum(1)\n"
+                    "  var   = accum((each(data) - mean)**2) / len(data)\n"
+                    "  ax.line(mean, ci=0.95, variance=var, n=count)"
+                )
+            _z_score(ci)  # validate early
         self._line_bindings.append({
             "var": var,
             "label": label,
             "history_v": [],
+            "history_ci_lower": [],
+            "history_ci_upper": [],
             "style": {"color": color, "linewidth": linewidth, "linestyle": linestyle},
+            "ci": ci,
+            "ci_var": variance,
+            "ci_n": n,
         })
 
     def scatter(self, x_var, y_var):
         """
         Bind two progressive variables as a convergence-trajectory scatter.
-        The point (x_var, y_var) moves toward its final value over time.
 
         Args:
             x_var: variable for the x-axis
@@ -87,26 +138,40 @@ class ProgressiveAxes:
             "history_y": [],
         })
 
-    def bar(self, var, label=None, color=None):
+    def bar(self, var, label=None, color=None, ci=None, variance=None, n=None):
         """
         Bind a progressive variable as a bar chart (current-value snapshot).
 
-        Two modes depending on the variable type at runtime:
+        Modes:
         - GroupBy variable  → x = group keys, y = group values
         - Scalar variable   → a single bar showing the current value
 
         Calling bar() multiple times on the same axes adds grouped series.
 
         Args:
-            var:   a PyProgressive variable (same object passed to compile())
-            label: bar series label (optional)
-            color: bar color, any CSS/hex string (optional)
+            var:      PyProgressive variable (same object passed to compile())
+            label:    bar series label (optional)
+            color:    CSS/hex color string (optional)
+            ci:       confidence level — 0.90, 0.95, or 0.99 (optional).
+                      When set on a GroupBy variable, error bars are added
+                      automatically (no extra compile needed).
+                      For scalar variables, variance= and n= are required.
+            variance: variance variable (required for scalar CI, optional for GroupBy)
+            n:        count variable (required for scalar CI, optional for GroupBy)
         """
+        if ci is not None:
+            _z_score(ci)  # validate early
         self._bar_bindings.append({
             "var": var,
             "label": label,
             "current_val": None,
+            "current_ci_err": None,
             "style": {"color": color},
+            "ci": ci,
+            "ci_var": variance,
+            "ci_n": n,
+            "_auto_ex2_var": None,     # filled by ProgressiveFigure.run()
+            "_auto_count_var": None,   # filled by ProgressiveFigure.run()
         })
 
     def set_title(self, text):
@@ -119,7 +184,7 @@ class ProgressiveAxes:
         self._ylabel = text
 
     def set_ylim(self, ymin, ymax):
-        """Fix the y-axis range.  Useful for e.g. correlation plots: set_ylim(-1, 1)."""
+        """Fix the y-axis range.  Useful e.g. for correlation: set_ylim(-1, 1)."""
         self._ylim = (ymin, ymax)
 
     # ------------------------------------------------------------------
@@ -131,46 +196,84 @@ class ProgressiveAxes:
         vars_ = []
         for b in self._line_bindings:
             vars_.append(b["var"])
+            if b["ci_var"] is not None:
+                vars_.append(b["ci_var"])
+            if b["ci_n"] is not None:
+                vars_.append(b["ci_n"])
         for b in self._scatter_bindings:
             vars_.append(b["x_var"])
             vars_.append(b["y_var"])
         for b in self._bar_bindings:
             vars_.append(b["var"])
+            if b["ci_var"] is not None:
+                vars_.append(b["ci_var"])
+            if b["ci_n"] is not None:
+                vars_.append(b["ci_n"])
+            if b["_auto_ex2_var"] is not None:
+                vars_.append(b["_auto_ex2_var"])
+            if b["_auto_count_var"] is not None:
+                vars_.append(b["_auto_count_var"])
         return vars_
 
     def _has_bar(self):
         return len(self._bar_bindings) > 0
 
     def _append(self, t, var_index, results):
-        """
-        Append one tick of data.  Called per callback tick by ProgressiveFigure.
-
-        Args:
-            t:         elapsed time (float)
-            var_index: {id(var): index_in_results} built by ProgressiveFigure
-            results:   tuple of callback result values
-        """
+        """Append one tick of data. Called per callback tick by ProgressiveFigure."""
         self._history_t.append(t)
 
+        # --- line ---
         for b in self._line_bindings:
             raw = results[var_index[id(b["var"])]]
-            b["history_v"].append(None if isinstance(raw, dict) else _to_finite_float(raw))
+            val = None if isinstance(raw, dict) else _to_finite_float(raw)
+            b["history_v"].append(val)
 
+            if b["ci"] is not None:
+                var_val = results[var_index[id(b["ci_var"])]]
+                n_val   = results[var_index[id(b["ci_n"])]]
+                hw = _ci_half(b["ci"], var_val, n_val)
+                center = val
+                if hw is not None and center is not None and not isinstance(hw, dict):
+                    b["history_ci_lower"].append(center - hw)
+                    b["history_ci_upper"].append(center + hw)
+                else:
+                    b["history_ci_lower"].append(None)
+                    b["history_ci_upper"].append(None)
+
+        # --- scatter ---
         for b in self._scatter_bindings:
-            xi = var_index[id(b["x_var"])]
-            yi = var_index[id(b["y_var"])]
-            b["history_x"].append(_to_finite_float(results[xi]))
-            b["history_y"].append(_to_finite_float(results[yi]))
+            b["history_x"].append(_to_finite_float(results[var_index[id(b["x_var"])]]))
+            b["history_y"].append(_to_finite_float(results[var_index[id(b["y_var"])]]))
 
+        # --- bar ---
         for b in self._bar_bindings:
             raw = results[var_index[id(b["var"])]]
             b["current_val"] = raw if isinstance(raw, dict) else _to_finite_float(raw)
 
+            if b["ci"] is not None:
+                if b["ci_var"] is not None:
+                    # explicit var/n
+                    var_val = results[var_index[id(b["ci_var"])]]
+                    n_val   = results[var_index[id(b["ci_n"])]]
+                else:
+                    # GroupBy auto: var[k] = E[X^2][k] - E[X][k]^2
+                    ex2_val  = results[var_index[id(b["_auto_ex2_var"])]]
+                    mean_val = b["current_val"]
+                    n_val    = results[var_index[id(b["_auto_count_var"])]]
+                    if isinstance(ex2_val, dict) and isinstance(mean_val, dict):
+                        var_val = {
+                            k: ex2_val[k] - mean_val[k] ** 2
+                            for k in mean_val
+                            if k in ex2_val
+                            and mean_val[k] is not None
+                            and ex2_val[k] is not None
+                        }
+                    else:
+                        var_val = None
+                b["current_ci_err"] = _ci_half(b["ci"], var_val, n_val) if var_val is not None else None
+
     def _build_traces(self):
-        """
-        Return a list of traces (go.Scatter or go.Bar) for this axes.
-        Called by ProgressiveFigure._build_figure() on every tick.
-        """
+        """Return traces for this axes. Called by ProgressiveFigure._build_figure()."""
         traces = []
 
         # --- line traces ---
@@ -191,6 +294,29 @@ class ProgressiveAxes:
                 x=xs, y=ys, mode="lines", name=lbl,
                 line=line_kwargs if line_kwargs else None,
             ))
+
+            # CI fill band (upper trace first, then lower with fill="tonexty")
+            if b["ci"] is not None and b["history_ci_upper"]:
+                uppers = [(t, v) for t, v in zip(self._history_t, b["history_ci_upper"]) if v is not None]
+                lowers = [(t, v) for t, v in zip(self._history_t, b["history_ci_lower"]) if v is not None]
+                if uppers and lowers:
+                    fill_color = "rgba(100,149,237,0.2)"
+                    # Use line color if provided
+                    if s["color"] is not None:
+                        # build rgba from named color — fallback to default blue
+                        fill_color = "rgba(100,149,237,0.2)"
+                    traces.append(go.Scatter(
+                        x=[p[0] for p in uppers], y=[p[1] for p in uppers],
+                        mode="lines", line=dict(width=0),
+                        showlegend=False, hoverinfo="skip",
+                    ))
+                    traces.append(go.Scatter(
+                        x=[p[0] for p in lowers], y=[p[1] for p in lowers],
+                        mode="lines", fill="tonexty",
+                        fillcolor=fill_color, line=dict(width=0),
+                        showlegend=False, hoverinfo="skip",
+                        name=f"{lbl} {int(b['ci'] * 100)}% CI",
+                    ))
 
         # --- scatter traces ---
         for b in self._scatter_bindings:
@@ -227,12 +353,24 @@ class ProgressiveAxes:
             else:
                 x_vals = [lbl]
                 y_vals = [val]
+
+            # error bars
+            error_y = None
+            err = b["current_ci_err"]
+            if err is not None:
+                if isinstance(val, dict) and isinstance(err, dict):
+                    error_array = [err.get(str(k), 0) for k in val.keys()]
+                    error_y = dict(type="data", array=error_array, visible=True)
+                elif not isinstance(err, dict):
+                    error_y = dict(type="data", array=[err], visible=True)
+
             marker_kwargs = {}
             if b["style"]["color"] is not None:
                 marker_kwargs["color"] = b["style"]["color"]
             traces.append(go.Bar(
                 x=x_vals, y=y_vals, name=lbl,
                 marker=marker_kwargs if marker_kwargs else None,
+                error_y=error_y,
             ))
 
         return traces
