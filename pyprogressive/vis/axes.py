@@ -79,6 +79,7 @@ class ProgressiveAxes:
         self._line_bindings = []
         self._scatter_bindings = []
         self._bar_bindings = []
+        self._heatmap_bindings = []
 
     # ------------------------------------------------------------------
     # Public configuration API
@@ -174,6 +175,53 @@ class ProgressiveAxes:
             "_auto_count_var": None,   # filled by ProgressiveFigure.run()
         })
 
+    def heatmap(self, var_grid, labels=None, xlabels=None, ylabels=None,
+                zmin=None, zmax=None, colorscale=None):
+        """
+        Bind a 2-D grid of progressive variables as a heatmap (current-value snapshot).
+
+        Each cell in var_grid is either a PyProgressive variable (same object
+        passed to compile()) or a numeric constant (e.g. 1 for a diagonal).
+
+        Args:
+            var_grid:   2-D list of Variable / numeric constant
+            labels:     symmetric axis labels — used for both x and y when
+                        xlabels / ylabels are not given (optional)
+            xlabels:    column labels, length must equal ncols (optional)
+            ylabels:    row labels, length must equal nrows (optional)
+            zmin:       minimum of the color scale (optional, e.g. -1)
+            zmax:       maximum of the color scale (optional, e.g.  1)
+            colorscale: Plotly colorscale name (default "RdBu")
+
+        Example::
+
+            corr12 = cov12 / pp.sqrt(var1 * var2)
+            corr13 = cov13 / pp.sqrt(var1 * var3)
+            corr23 = cov23 / pp.sqrt(var2 * var3)
+
+            program = pp.compile(cov12, cov13, cov23, var1, var2, var3,
+                                 corr12, corr13, corr23)
+
+            fig, ax = pp.vis.subplots()
+            ax.heatmap(
+                [[1,       corr12, corr13],
+                 [corr12,  1,      corr23],
+                 [corr13,  corr23, 1     ]],
+                labels=["X1", "X2", "X3"],
+                zmin=-1, zmax=1,
+            )
+            fig.run(program, interval=0.3)
+        """
+        self._heatmap_bindings.append({
+            "var_grid":   var_grid,
+            "xlabels":    xlabels if xlabels is not None else labels,
+            "ylabels":    ylabels if ylabels is not None else labels,
+            "zmin":       zmin,
+            "zmax":       zmax,
+            "colorscale": colorscale or "RdBu",
+            "current_matrix": None,
+        })
+
     def set_title(self, text):
         self._title = text
 
@@ -213,6 +261,11 @@ class ProgressiveAxes:
                 vars_.append(b["_auto_ex2_var"])
             if b["_auto_count_var"] is not None:
                 vars_.append(b["_auto_count_var"])
+        for b in self._heatmap_bindings:
+            for row in b["var_grid"]:
+                for cell in row:
+                    if not isinstance(cell, (int, float)):
+                        vars_.append(cell)
         return vars_
 
     def _has_bar(self):
@@ -271,6 +324,21 @@ class ProgressiveAxes:
                     else:
                         var_val = None
                 b["current_ci_err"] = _ci_half(b["ci"], var_val, n_val) if var_val is not None else None
+
+        # --- heatmap ---
+        for b in self._heatmap_bindings:
+            matrix = []
+            for row in b["var_grid"]:
+                row_vals = []
+                for cell in row:
+                    if isinstance(cell, (int, float)):
+                        row_vals.append(float(cell))
+                    elif id(cell) in var_index:
+                        row_vals.append(_to_finite_float(results[var_index[id(cell)]]))
+                    else:
+                        row_vals.append(None)
+                matrix.append(row_vals)
+            b["current_matrix"] = matrix
 
     def _build_traces(self):
         """Return traces for this axes. Called by ProgressiveFigure._build_figure()."""
@@ -372,5 +440,26 @@ class ProgressiveAxes:
                 marker=marker_kwargs if marker_kwargs else None,
                 error_y=error_y,
             ))
+
+        # --- heatmap traces ---
+        for b in self._heatmap_bindings:
+            if b["current_matrix"] is None:
+                continue
+            kwargs = dict(
+                z=b["current_matrix"],
+                colorscale=b["colorscale"],
+                showscale=True,
+            )
+            if b["xlabels"] is not None:
+                kwargs["x"] = b["xlabels"]
+            if b["ylabels"] is not None:
+                kwargs["y"] = b["ylabels"]
+            if b["zmin"] is not None:
+                kwargs["zmin"] = b["zmin"]
+            if b["zmax"] is not None:
+                kwargs["zmax"] = b["zmax"]
+            if b["zmin"] is not None and b["zmax"] is not None:
+                kwargs["zmid"] = (b["zmin"] + b["zmax"]) / 2
+            traces.append(go.Heatmap(**kwargs))
 
         return traces
