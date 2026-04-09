@@ -26,12 +26,3 @@ def _make_callback(n_vars, update_fn):
     return _cb
 
 
-class ProgressiveRunner:
-    def __init__(self, program, chart):
-        self.program = program
-        self.chart = chart
-
-    def run(self, interval):
-        n_vars = len(self.program.args)
-        callback = _make_callback(n_vars, self.chart._update)
-        self.program.run(interval=interval, callback=callback)

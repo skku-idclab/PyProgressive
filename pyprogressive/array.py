@@ -13,6 +13,10 @@ def reset():
 class array:
     _id = 0
     def __init__(self, data):
+        # Normalize pandas Series/DataFrame columns: their index may be non-contiguous
+        # after dropna() or boolean filtering, causing KeyError on integer access.
+        if hasattr(data, 'iloc'):
+            data = data.tolist()
         self.data = data
         self.length = len(data)
         self.iter = 0

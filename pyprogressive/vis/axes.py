@@ -21,7 +21,7 @@ class ProgressiveAxes:
     A single subplot panel, analogous to a matplotlib Axes.
 
     Bind progressive variables with line(), scatter(), or bar(), then configure
-    with set_title / set_xlabel / set_ylabel before calling fig.run().
+    with set_title / set_xlabel / set_ylabel / set_ylim before calling fig.run().
 
     Users never instantiate this directly — use pp.vis.subplots() instead.
     """
@@ -34,37 +34,41 @@ class ProgressiveAxes:
         self._title = None
         self._xlabel = None
         self._ylabel = None
+        self._ylim = None   # (ymin, ymax) or None
 
         # shared time axis for all line bindings on this axes
         self._history_t = []
 
-        # [{var, label, history_v}]
+        # [{var, label, history_v, style}]
         self._line_bindings = []
 
         # [{x_var, y_var, history_x, history_y}]
         self._scatter_bindings = []
 
-        # [{var, label, current_val}]
-        # current_val is a dict (GroupBy) or float (scalar) — bar shows latest snapshot only
+        # [{var, label, current_val, style}]
         self._bar_bindings = []
 
     # ------------------------------------------------------------------
     # Public configuration API
     # ------------------------------------------------------------------
 
-    def line(self, var, label=None):
+    def line(self, var, label=None, color=None, linewidth=None, linestyle=None):
         """
         Bind a progressive variable as a line on this axes.
         x-axis = elapsed computation time, y-axis = variable value.
 
         Args:
-            var:   a PyProgressive variable (same object passed to compile())
-            label: legend label (optional)
+            var:       a PyProgressive variable (same object passed to compile())
+            label:     legend label (optional)
+            color:     line color, any CSS/hex string e.g. "red", "#1f77b4" (optional)
+            linewidth: line width in pixels (optional)
+            linestyle: "solid" | "dot" | "dash" | "longdash" | "dashdot" (optional)
         """
         self._line_bindings.append({
             "var": var,
             "label": label,
             "history_v": [],
+            "style": {"color": color, "linewidth": linewidth, "linestyle": linestyle},
         })
 
     def scatter(self, x_var, y_var):
@@ -83,13 +87,12 @@ class ProgressiveAxes:
             "history_y": [],
         })
 
-    def bar(self, var, label=None):
+    def bar(self, var, label=None, color=None):
         """
         Bind a progressive variable as a bar chart (current-value snapshot).
 
         Two modes depending on the variable type at runtime:
         - GroupBy variable  → x = group keys, y = group values
-          e.g. group_mean gives {'A': 3.0, 'B': 2.5} → bars per group
         - Scalar variable   → a single bar showing the current value
 
         Calling bar() multiple times on the same axes adds grouped series.
@@ -97,11 +100,13 @@ class ProgressiveAxes:
         Args:
             var:   a PyProgressive variable (same object passed to compile())
             label: bar series label (optional)
+            color: bar color, any CSS/hex string (optional)
         """
         self._bar_bindings.append({
             "var": var,
             "label": label,
-            "current_val": None,   # updated each tick; None until first callback
+            "current_val": None,
+            "style": {"color": color},
         })
 
     def set_title(self, text):
@@ -112,6 +117,10 @@ class ProgressiveAxes:
 
     def set_ylabel(self, text):
         self._ylabel = text
+
+    def set_ylim(self, ymin, ymax):
+        """Fix the y-axis range.  Useful for e.g. correlation plots: set_ylim(-1, 1)."""
+        self._ylim = (ymin, ymax)
 
     # ------------------------------------------------------------------
     # Internal helpers (called by ProgressiveFigure)
@@ -155,7 +164,6 @@ class ProgressiveAxes:
 
         for b in self._bar_bindings:
             raw = results[var_index[id(b["var"])]]
-            # keep as dict (GroupBy) or convert to float (scalar)
             b["current_val"] = raw if isinstance(raw, dict) else _to_finite_float(raw)
 
     def _build_traces(self):
@@ -171,7 +179,18 @@ class ProgressiveAxes:
             valid = [(t, v) for t, v in zip(self._history_t, b["history_v"]) if v is not None]
             xs = [p[0] for p in valid]
             ys = [p[1] for p in valid]
-            traces.append(go.Scatter(x=xs, y=ys, mode="lines", name=lbl))
+            s = b["style"]
+            line_kwargs = {}
+            if s["color"] is not None:
+                line_kwargs["color"] = s["color"]
+            if s["linewidth"] is not None:
+                line_kwargs["width"] = s["linewidth"]
+            if s["linestyle"] is not None:
+                line_kwargs["dash"] = s["linestyle"]
+            traces.append(go.Scatter(
+                x=xs, y=ys, mode="lines", name=lbl,
+                line=line_kwargs if line_kwargs else None,
+            ))
 
         # --- scatter traces ---
         for b in self._scatter_bindings:
@@ -203,13 +222,17 @@ class ProgressiveAxes:
                 continue
             lbl = b["label"] if b["label"] is not None else f"bar{i}"
             if isinstance(val, dict):
-                # GroupBy: x = group keys, y = group values
                 x_vals = [str(k) for k in val.keys()]
                 y_vals = list(val.values())
             else:
-                # Scalar: single bar
                 x_vals = [lbl]
                 y_vals = [val]
-            traces.append(go.Bar(x=x_vals, y=y_vals, name=lbl))
+            marker_kwargs = {}
+            if b["style"]["color"] is not None:
+                marker_kwargs["color"] = b["style"]["color"]
+            traces.append(go.Bar(
+                x=x_vals, y=y_vals, name=lbl,
+                marker=marker_kwargs if marker_kwargs else None,
+            ))
 
         return traces

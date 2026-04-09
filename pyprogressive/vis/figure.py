@@ -29,11 +29,21 @@ class ProgressiveFigure:
     Displayed as a single output that updates in-place on each callback tick.
     """
 
-    def __init__(self, rows, cols, axes_grid):
+    def __init__(self, rows, cols, axes_grid, figsize=None):
         self._rows = rows
         self._cols = cols
         self._axes = axes_grid
+        self._figsize = figsize   # (width_px, height_px) or None
+        self._suptitle = None
         self._display_handle = None
+
+    # ------------------------------------------------------------------
+    # Public configuration API
+    # ------------------------------------------------------------------
+
+    def suptitle(self, text):
+        """Set an overall title for the entire figure (above all subplots)."""
+        self._suptitle = text
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -42,10 +52,42 @@ class ProgressiveFigure:
     def _flat_axes(self):
         return [ax for row in self._axes for ax in row]
 
+    def _apply_layout(self, fig, done):
+        """Apply figsize, suptitle, ylim, and done marker to a figure."""
+        flat = self._flat_axes()
+        has_bar = any(ax._has_bar() for ax in flat)
+
+        layout_kwargs = {}
+        if has_bar:
+            layout_kwargs["barmode"] = "group"
+
+        # suptitle (overrides done marker when set)
+        title_text = self._suptitle or ""
+        if done:
+            title_text = (title_text + "  (done)").strip()
+        if title_text:
+            layout_kwargs["title_text"] = title_text
+
+        if self._figsize is not None:
+            layout_kwargs["width"] = self._figsize[0]
+            layout_kwargs["height"] = self._figsize[1]
+
+        if layout_kwargs:
+            fig.update_layout(**layout_kwargs)
+
+        # per-axes y-axis range
+        for ax in flat:
+            if ax._ylim is not None:
+                fig.update_yaxes(
+                    range=list(ax._ylim),
+                    row=ax._row, col=ax._col,
+                )
+
+        return fig
+
     def _build_figure(self, done):
         flat = self._flat_axes()
         subplot_titles = [ax._title or "" for ax in flat]
-        has_bar = any(ax._has_bar() for ax in flat)
 
         fig = make_subplots(
             rows=self._rows,
@@ -61,19 +103,12 @@ class ProgressiveFigure:
             if ax._ylabel:
                 fig.update_yaxes(title_text=ax._ylabel, row=ax._row, col=ax._col)
 
-        layout_kwargs = {}
-        if has_bar:
-            layout_kwargs["barmode"] = "group"
-        if done:
-            layout_kwargs["title_text"] = "(done)"
-        if layout_kwargs:
-            fig.update_layout(**layout_kwargs)
-
-        return fig
+        return self._apply_layout(fig, done)
 
     def _build_empty_figure(self):
         flat = self._flat_axes()
         subplot_titles = [ax._title or "" for ax in flat]
+
         fig = make_subplots(
             rows=self._rows,
             cols=self._cols,
@@ -84,7 +119,8 @@ class ProgressiveFigure:
                 fig.update_xaxes(title_text=ax._xlabel, row=ax._row, col=ax._col)
             if ax._ylabel:
                 fig.update_yaxes(title_text=ax._ylabel, row=ax._row, col=ax._col)
-        return fig
+
+        return self._apply_layout(fig, done=False)
 
     def _update(self, t, done, var_index, *results):
         """Called per tick by the background thread."""
