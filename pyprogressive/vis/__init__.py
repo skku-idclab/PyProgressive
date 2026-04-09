@@ -140,6 +140,49 @@ def scatter(x_label="X", y_label="Y", title=None, figsize=None):
     return chart
 
 
+def pie(hole=0.0, title=None, figsize=None):
+    """
+    Create a single-panel progressive pie (or donut) chart.
+
+    The compiled variable must be a GroupBy variable whose values are the
+    slice sizes.  The chart updates as a snapshot on every tick.
+
+    Parameters
+    ----------
+    hole    : float, 0.0 = pie (default), 0.4 = donut
+    title   : chart title (optional)
+    figsize : (width, height) in pixels (optional)
+
+    Returns a chart object with a .run(program, interval) method.
+
+    Example::
+
+        group_count = group(each(data, 0), accum(1))
+        program = pp.compile(group_count)
+
+        chart = pp.vis.pie(hole=0.4, title="Counts by Group")
+        chart.run(program, interval=0.1)
+    """
+    fig, ax = subplots(figsize=figsize)
+    if title:
+        ax.set_title(title)
+
+    original_run = fig.run
+
+    def _run(program, interval=0.5):
+        if len(program.args) != 1:
+            raise ValueError(
+                f"pp.vis.pie() requires exactly 1 variable, "
+                f"got {len(program.args)}."
+            )
+        ax.pie(program.args[0], hole=hole)
+        original_run(program, interval=interval)
+
+    chart = _SimpleChart(fig, ax)
+    chart.run = _run
+    return chart
+
+
 def bar(labels=None, title=None, figsize=None):
     """
     Create a single-panel progressive bar chart.

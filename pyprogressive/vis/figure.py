@@ -87,6 +87,17 @@ class ProgressiveFigure:
     def _flat_axes(self):
         return [ax for row in self._axes for ax in row]
 
+    def _collect_shapes(self):
+        """Gather axhline / axvline shapes from every subplot axes."""
+        shapes = []
+        flat = self._flat_axes()
+        for i, ax in enumerate(flat):
+            subplot_idx = i + 1
+            xref = "x" if subplot_idx == 1 else f"x{subplot_idx}"
+            yref = "y" if subplot_idx == 1 else f"y{subplot_idx}"
+            shapes.extend(ax._get_shapes(xref, yref))
+        return shapes
+
     def _apply_layout(self, fig, done):
         flat = self._flat_axes()
         has_bar = any(ax._has_bar() for ax in flat)
@@ -131,6 +142,10 @@ class ProgressiveFigure:
             if ax._ylabel:
                 fig.update_yaxes(title_text=ax._ylabel, row=ax._row, col=ax._col)
 
+        shapes = self._collect_shapes()
+        if shapes:
+            fig.update_layout(shapes=shapes)
+
         return self._apply_layout(fig, done)
 
     def _build_empty_figure(self):
@@ -147,6 +162,10 @@ class ProgressiveFigure:
                 fig.update_xaxes(title_text=ax._xlabel, row=ax._row, col=ax._col)
             if ax._ylabel:
                 fig.update_yaxes(title_text=ax._ylabel, row=ax._row, col=ax._col)
+
+        shapes = self._collect_shapes()
+        if shapes:
+            fig.update_layout(shapes=shapes)
 
         return self._apply_layout(fig, done=False)
 

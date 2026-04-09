@@ -43,6 +43,32 @@ def _ci_half(ci_level, var_val, n_val):
         return None
 
 
+_LINESTYLE_MAP = {
+    # Plotly names (pass-through)
+    "solid":    "solid",
+    "dot":      "dot",
+    "dash":     "dash",
+    "longdash": "longdash",
+    "dashdot":  "dashdot",
+    # matplotlib shortcuts
+    "-":        "solid",
+    "--":       "dash",
+    ":":        "dot",
+    "-.":       "dashdot",
+}
+
+
+def _linestyle_to_plotly(s):
+    """Convert a linestyle string (matplotlib or Plotly) to a Plotly dash value."""
+    result = _LINESTYLE_MAP.get(s)
+    if result is None:
+        raise ValueError(
+            f"Unsupported linestyle: {repr(s)}. "
+            f"Supported: {sorted(_LINESTYLE_MAP.keys())}"
+        )
+    return result
+
+
 def _to_finite_float(raw):
     """Convert raw to float, returning None for NaN, Inf, complex, or any error."""
     try:
@@ -80,6 +106,9 @@ class ProgressiveAxes:
         self._scatter_bindings = []
         self._bar_bindings = []
         self._heatmap_bindings = []
+        self._pie_bindings = []
+        self._axhlines = []
+        self._axvlines = []
 
     # ------------------------------------------------------------------
     # Public configuration API
@@ -222,6 +251,58 @@ class ProgressiveAxes:
             "current_matrix": None,
         })
 
+    def pie(self, var, hole=0.0, colors=None):
+        """
+        Bind a progressive variable as a pie (or donut) chart.
+
+        Two modes depending on the type of var:
+
+        **GroupBy variable** (most common)
+            Group keys become slice labels; group values become slice sizes.
+            The chart updates as a snapshot on every tick.
+
+        **Scalar variable**
+            Each call to pie() on the same axes adds one slice.
+            The slice label is taken from the variable's compile-time label if
+            set, otherwise "slice<i>".  Pass label= via compile() or use
+            multiple GroupBy keys instead.
+
+        Args:
+            var:    PyProgressive variable (GroupBy or scalar).
+                    Same object that was passed to compile().
+            hole:   Fraction of the radius to cut out for a donut chart.
+                    0.0 = full pie (default), 0.4 = donut.
+            colors: List of CSS/hex color strings, one per slice (optional).
+
+        Examples::
+
+            # --- GroupBy: group counts as a pie ---
+            group_count = group(each(data, 0), accum(1))
+            program = pp.compile(group_count)
+
+            fig, ax = pp.vis.subplots()
+            ax.pie(group_count)
+            fig.run(program, interval=0.1)
+
+            # --- Donut ---
+            ax.pie(group_mean, hole=0.4)
+
+            # --- Multiple scalar slices ---
+            count_a = accum(...)
+            count_b = accum(...)
+            program = pp.compile(count_a, count_b)
+
+            ax.pie(count_a, label="A")  # not yet; use GroupBy for this case
+        """
+        if not (0.0 <= hole < 1.0):
+            raise ValueError("hole must be in [0.0, 1.0).")
+        self._pie_bindings.append({
+            "var":         var,
+            "hole":        hole,
+            "colors":      colors,
+            "current_val": None,
+        })
+
     def set_title(self, text):
         self._title = text
 
@@ -230,6 +311,59 @@ class ProgressiveAxes:
 
     def set_ylabel(self, text):
         self._ylabel = text
+
+    def axhline(self, y, color="gray", linewidth=1, linestyle="dash"):
+        """
+        Draw a horizontal reference line across the full width of this subplot.
+
+        Args:
+            y:         y-axis value at which to draw the line
+            color:     CSS/hex color string (default "gray")
+            linewidth: line width in pixels (default 1)
+            linestyle: "solid" | "dot" | "dash" | "longdash" | "dashdot"
+                       or matplotlib shortcuts "-" | "--" | ":" | "-."
+                       (default "dash")
+
+        Example::
+
+            ax.line(corr, label="Corr(X,Y)")
+            ax.axhline(0,    color="gray",  linestyle="dash")   # zero baseline
+            ax.axhline(0.5,  color="green", linestyle="dot")    # reference value
+            ax.set_ylim(-1, 1)
+        """
+        self._axhlines.append({
+            "y":         y,
+            "color":     color,
+            "linewidth": linewidth,
+            "linestyle": _linestyle_to_plotly(linestyle),
+        })
+
+    def axvline(self, x, color="gray", linewidth=1, linestyle="dash"):
+        """
+        Draw a vertical reference line across the full height of this subplot.
+
+        The x coordinate is in elapsed-time seconds (same scale as the x-axis
+        of line / scatter charts).
+
+        Args:
+            x:         x-axis value (elapsed time in seconds)
+            color:     CSS/hex color string (default "gray")
+            linewidth: line width in pixels (default 1)
+            linestyle: "solid" | "dot" | "dash" | "longdash" | "dashdot"
+                       or matplotlib shortcuts "-" | "--" | ":" | "-."
+                       (default "dash")
+
+        Example::
+
+            ax.line(mean, label="Mean")
+            ax.axvline(1.0, color="red", linestyle="dot")   # mark t=1 s
+        """
+        self._axvlines.append({
+            "x":         x,
+            "color":     color,
+            "linewidth": linewidth,
+            "linestyle": _linestyle_to_plotly(linestyle),
+        })
 
     def set_ylim(self, ymin, ymax):
         """Fix the y-axis range.  Useful e.g. for correlation: set_ylim(-1, 1)."""
@@ -266,10 +400,37 @@ class ProgressiveAxes:
                 for cell in row:
                     if not isinstance(cell, (int, float)):
                         vars_.append(cell)
+        for b in self._pie_bindings:
+            vars_.append(b["var"])
         return vars_
 
     def _has_bar(self):
         return len(self._bar_bindings) > 0
+
+    def _get_shapes(self, xref, yref):
+        """Return Plotly shape dicts for axhline / axvline on this subplot.
+
+        xref / yref are the Plotly axis references for this subplot
+        (e.g. "x", "y" for the first; "x2", "y2" for the second, etc.).
+        """
+        shapes = []
+        for h in self._axhlines:
+            shapes.append(dict(
+                type="line",
+                # span the full subplot width using the axis domain
+                x0=0, x1=1, xref=f"{xref} domain",
+                y0=h["y"], y1=h["y"], yref=yref,
+                line=dict(color=h["color"], width=h["linewidth"], dash=h["linestyle"]),
+            ))
+        for v in self._axvlines:
+            shapes.append(dict(
+                type="line",
+                x0=v["x"], x1=v["x"], xref=xref,
+                # span the full subplot height using the axis domain
+                y0=0, y1=1, yref=f"{yref} domain",
+                line=dict(color=v["color"], width=v["linewidth"], dash=v["linestyle"]),
+            ))
+        return shapes
 
     def _append(self, t, var_index, results):
         """Append one tick of data. Called per callback tick by ProgressiveFigure."""
@@ -324,6 +485,11 @@ class ProgressiveAxes:
                     else:
                         var_val = None
                 b["current_ci_err"] = _ci_half(b["ci"], var_val, n_val) if var_val is not None else None
+
+        # --- pie ---
+        for b in self._pie_bindings:
+            raw = results[var_index[id(b["var"])]]
+            b["current_val"] = raw if isinstance(raw, dict) else _to_finite_float(raw)
 
         # --- heatmap ---
         for b in self._heatmap_bindings:
@@ -440,6 +606,41 @@ class ProgressiveAxes:
                 marker=marker_kwargs if marker_kwargs else None,
                 error_y=error_y,
             ))
+
+        # --- pie traces ---
+        # Collect all pie bindings for this axes into one go.Pie trace.
+        # GroupBy vars  → keys = labels, values = sizes
+        # Scalar vars   → each binding contributes one slice
+        pie_labels = []
+        pie_values = []
+        pie_hole   = 0.0
+        pie_colors = None
+
+        for i, b in enumerate(self._pie_bindings):
+            val = b["current_val"]
+            if val is None:
+                continue
+            pie_hole = b["hole"]  # last binding wins (all should match)
+            if b["colors"] is not None:
+                pie_colors = b["colors"]
+
+            if isinstance(val, dict):
+                pie_labels.extend([str(k) for k in val.keys()])
+                pie_values.extend([v for v in val.values()])
+            else:
+                pie_labels.append(f"slice{i}")
+                pie_values.append(val)
+
+        if pie_values:
+            pie_kwargs = dict(
+                labels=pie_labels,
+                values=pie_values,
+                hole=pie_hole,
+                textinfo="label+percent",
+            )
+            if pie_colors is not None:
+                pie_kwargs["marker"] = dict(colors=pie_colors)
+            traces.append(go.Pie(**pie_kwargs))
 
         # --- heatmap traces ---
         for b in self._heatmap_bindings:
