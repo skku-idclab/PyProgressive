@@ -612,6 +612,7 @@ class ProgressiveAxes:
                 marker_kwargs["color"] = b["style"]["color"]
             traces.append(go.Bar(
                 x=x_vals, y=y_vals, name=lbl,
+                showlegend=b["label"] is not None,
                 marker=marker_kwargs if marker_kwargs else None,
                 error_y=error_y,
             ))
