@@ -100,6 +100,7 @@ class ProgressiveAxes:
         self._xlabel = None
         self._ylabel = None
         self._ylim = None
+        self._showlegend = True
 
         self._history_t = []
         self._line_bindings = []
@@ -313,6 +314,10 @@ class ProgressiveAxes:
 
     def set_ylabel(self, text):
         self._ylabel = text
+
+    def legend(self, show):
+        """Show or hide the legend for this subplot.  Pass False to hide."""
+        self._showlegend = bool(show)
 
     def axhline(self, y, color="gray", linewidth=1, linestyle="dash"):
         """
@@ -672,5 +677,9 @@ class ProgressiveAxes:
             if b["zmin"] is not None and b["zmax"] is not None:
                 kwargs["zmid"] = (b["zmin"] + b["zmax"]) / 2
             traces.append(go.Heatmap(**kwargs))
+
+        if not self._showlegend:
+            for trace in traces:
+                trace.update(showlegend=False)
 
         return traces

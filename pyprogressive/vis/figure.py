@@ -73,6 +73,7 @@ class ProgressiveFigure:
         self._display_handle = None
         self._progress = 0.0   # 0.0 ~ 1.0
         self._elapsed_t = 0.0  # elapsed seconds
+        self._showlegend = True
 
     # ------------------------------------------------------------------
     # Public configuration API
@@ -81,6 +82,10 @@ class ProgressiveFigure:
     def suptitle(self, text):
         """Set an overall title for the entire figure (above all subplots)."""
         self._suptitle = text
+
+    def legend(self, show):
+        """Show or hide the figure legend.  Pass False to hide all legends."""
+        self._showlegend = bool(show)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -141,6 +146,9 @@ class ProgressiveFigure:
         if self._figsize is not None:
             layout_kwargs["width"] = self._figsize[0]
             layout_kwargs["height"] = self._figsize[1]
+
+        if not self._showlegend:
+            layout_kwargs["showlegend"] = False
 
         if layout_kwargs:
             fig.update_layout(**layout_kwargs)
