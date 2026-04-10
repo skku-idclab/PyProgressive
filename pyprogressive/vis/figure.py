@@ -177,6 +177,19 @@ class ProgressiveFigure:
         if shapes:
             fig.update_layout(shapes=shapes)
 
+        # Reposition colorbars to appear immediately right of their own subplot
+        # (mirrors matplotlib's fig.colorbar(im, ax=ax) behaviour).
+        # Applies to any trace type that supports showscale (Heatmap, Contour,
+        # Scatter with colorscale, etc.) when there are multiple columns.
+        if self._cols > 1:
+            for i, trace in enumerate(fig.data):
+                if not getattr(trace, 'showscale', False):
+                    continue
+                xaxis_ref = getattr(trace, 'xaxis', None) or 'x'
+                axis_key = 'xaxis' + xaxis_ref[1:]  # 'x' -> 'xaxis', 'x2' -> 'xaxis2'
+                domain = fig.layout[axis_key].domain
+                fig.data[i].update(colorbar=dict(x=domain[1] + 0.01, xanchor='left'))
+
         return self._apply_layout(fig, done)
 
     def _build_empty_figure(self):

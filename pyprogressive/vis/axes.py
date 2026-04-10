@@ -205,7 +205,7 @@ class ProgressiveAxes:
         })
 
     def heatmap(self, var_grid, labels=None, xlabels=None, ylabels=None,
-                zmin=None, zmax=None, colorscale=None):
+                zmin=None, zmax=None, colorscale=None, showscale=True):
         """
         Bind a 2-D grid of progressive variables as a heatmap (current-value snapshot).
 
@@ -221,6 +221,7 @@ class ProgressiveAxes:
             zmin:       minimum of the color scale (optional, e.g. -1)
             zmax:       maximum of the color scale (optional, e.g.  1)
             colorscale: Plotly colorscale name (default "RdBu")
+            showscale:  whether to show the colorscale bar (default True)
 
         Example::
 
@@ -248,6 +249,7 @@ class ProgressiveAxes:
             "zmin":       zmin,
             "zmax":       zmax,
             "colorscale": colorscale or "RdBu",
+            "showscale":  showscale,
             "current_matrix": None,
         })
 
@@ -652,7 +654,7 @@ class ProgressiveAxes:
             kwargs = dict(
                 z=b["current_matrix"],
                 colorscale=b["colorscale"],
-                showscale=True,
+                showscale=b["showscale"],
             )
             if b["xlabels"] is not None:
                 kwargs["x"] = b["xlabels"]
