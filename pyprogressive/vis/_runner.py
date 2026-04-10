@@ -20,7 +20,8 @@ def _make_callback(n_vars, update_fn):
     def _cb(*args):
         elapsed_obj = args[-1]
         values = args[:-1]
-        update_fn(elapsed_obj.elapsed(), elapsed_obj.done, *values)
+        pct = elapsed_obj.current / elapsed_obj.total if elapsed_obj.total > 0 else 0.0
+        update_fn(elapsed_obj.elapsed(), elapsed_obj.done, pct, *values)
 
     _cb.__signature__ = inspect.Signature(params)
     return _cb

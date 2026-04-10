@@ -7,6 +7,8 @@ class Elapsed:
         self.start_time = None
         self.end_time = None
         self.done = False
+        self.current = 0   # number of items processed so far
+        self.total = 0     # total number of items
 
     def start(self):
         self.start_time = time.perf_counter()

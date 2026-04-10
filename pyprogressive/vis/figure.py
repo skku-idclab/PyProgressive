@@ -71,6 +71,8 @@ class ProgressiveFigure:
         self._figsize = figsize
         self._suptitle = None
         self._display_handle = None
+        self._progress = 0.0   # 0.0 ~ 1.0
+        self._elapsed_t = 0.0  # elapsed seconds
 
     # ------------------------------------------------------------------
     # Public configuration API
@@ -121,11 +123,20 @@ class ProgressiveFigure:
         if has_bar:
             layout_kwargs["barmode"] = "group"
 
-        title_text = self._suptitle or ""
+        BAR_WIDTH = 20
+        filled = BAR_WIDTH if done else int(self._progress * BAR_WIDTH)
+        bar = "█" * filled + "░" * (BAR_WIDTH - filled)
+        pct_int = 100 if done else int(self._progress * 100)
+        suffix = f"[{bar}] {pct_int}% | {self._elapsed_t:.1f}s"
         if done:
-            title_text = (title_text + "  (done)").strip()
+            suffix += " ✓"
+
+        title_text = self._suptitle or ""
         if title_text:
-            layout_kwargs["title_text"] = title_text
+            title_text = f"{title_text} — {suffix}"
+        else:
+            title_text = suffix
+        layout_kwargs["title_text"] = title_text
 
         if self._figsize is not None:
             layout_kwargs["width"] = self._figsize[0]
@@ -282,7 +293,9 @@ class ProgressiveFigure:
 
         n_vars = len(program.args)
 
-        def _update_wrapper(t, done, *results):
+        def _update_wrapper(t, done, pct, *results):
+            self._progress = pct
+            self._elapsed_t = t
             self._update(t, done, var_index, *results)
 
         callback = _make_callback(n_vars, _update_wrapper)

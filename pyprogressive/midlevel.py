@@ -185,9 +185,11 @@ class Program:
 
         #evaluate
         elapsed.start()
+        total_len = len(global_arraylist[0])
+        elapsed.total = total_len
         iter_accum_duration = 0
         support_normal_BQ_dict = {}
-        for idx in range(0, len(global_arraylist[0])):
+        for idx in range(0, total_len):
             # print("=== Iteration", idx, "===")
             iter_start = time.perf_counter()
 
@@ -278,6 +280,7 @@ class Program:
             iter_accum_duration += iter_end - iter_start
             if iter_accum_duration > interval * tau:
                 elapsed.stop()
+                elapsed.current = idx + 1
                 elapsed.done = False
                 if not inspect.isbuiltin(callback):
                     sig = inspect.signature(callback)
@@ -300,6 +303,7 @@ class Program:
 
 
         elapsed.stop()
+        elapsed.current = total_len
         elapsed.done = True
 
         if not inspect.isbuiltin(callback):
