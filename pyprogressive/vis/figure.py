@@ -153,6 +153,23 @@ class ProgressiveFigure:
 
         return fig
 
+    def _h_spacing(self, flat):
+        """Compute horizontal_spacing for make_subplots.
+
+        When any non-rightmost column contains a colorbar trace, we widen the
+        gap so that the colorbar (repositioned into the gap) does not overlap
+        with the adjacent subplot's tick labels or legend.  Otherwise we use
+        Plotly's default (0.2 / ncols).
+        """
+        default = 0.2 / self._cols
+        if self._cols <= 1:
+            return default
+        has_midcol_colorbar = any(
+            ax._col < self._cols and ax._has_colorbar()
+            for ax in flat
+        )
+        return 0.18 if has_midcol_colorbar else default
+
     def _build_figure(self, done):
         flat = self._flat_axes()
         subplot_titles = [ax._title or "" for ax in flat]
@@ -162,6 +179,7 @@ class ProgressiveFigure:
             cols=self._cols,
             subplot_titles=subplot_titles,
             specs=self._build_specs(),
+            horizontal_spacing=self._h_spacing(flat),
         )
         for ax in flat:
             for trace in ax._build_traces():
@@ -188,7 +206,11 @@ class ProgressiveFigure:
                 xaxis_ref = getattr(trace, 'xaxis', None) or 'x'
                 axis_key = 'xaxis' + xaxis_ref[1:]  # 'x' -> 'xaxis', 'x2' -> 'xaxis2'
                 domain = fig.layout[axis_key].domain
-                fig.data[i].update(colorbar=dict(x=domain[1] + 0.01, xanchor='left'))
+                fig.data[i].update(colorbar=dict(
+                    x=domain[1] + 0.01,
+                    xanchor='left',
+                    thickness=15,       # slimmer bar to fit in the gap
+                ))
 
         return self._apply_layout(fig, done)
 
@@ -201,6 +223,7 @@ class ProgressiveFigure:
             cols=self._cols,
             subplot_titles=subplot_titles,
             specs=self._build_specs(),
+            horizontal_spacing=self._h_spacing(flat),
         )
         for ax in flat:
             if ax._has_pie():

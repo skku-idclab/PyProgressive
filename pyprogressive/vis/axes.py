@@ -412,6 +412,10 @@ class ProgressiveAxes:
     def _has_pie(self):
         return len(self._pie_bindings) > 0
 
+    def _has_colorbar(self):
+        """Return True if this axes has any trace that will show a colorscale bar."""
+        return any(b.get('showscale', True) for b in self._heatmap_bindings)
+
     def _get_shapes(self, xref, yref):
         """Return Plotly shape dicts for axhline / axvline on this subplot.
 
