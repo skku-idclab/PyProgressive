@@ -178,6 +178,107 @@ class ProgressiveFigure:
         )
         return 0.18 if has_midcol_colorbar else default
 
+    def _subplot_domain(self, fig, trace):
+        """Return (domain_x, domain_y) for the subplot that owns *trace*.
+
+        domain_x / domain_y are [min, max] in paper coordinates [0, 1].
+        Returns (None, None) if the domain cannot be determined.
+        """
+        xaxis_ref = getattr(trace, 'xaxis', None)
+        if xaxis_ref:
+            suffix = xaxis_ref[1:]          # 'x' -> '', 'x2' -> '2'
+            x_key = 'xaxis' + suffix
+            y_key = 'yaxis' + suffix
+            try:
+                return (list(fig.layout[x_key].domain),
+                        list(fig.layout[y_key].domain))
+            except Exception:
+                pass
+        # Pie traces store their domain directly on the trace
+        domain_attr = getattr(trace, 'domain', None)
+        if domain_attr is not None:
+            try:
+                return (list(domain_attr.x), list(domain_attr.y))
+            except Exception:
+                pass
+        return (None, None)
+
+    def _reposition_subplot_legends(self, fig, ax_trace_ranges, flat):
+        """Give each subplot its own legend, placed just outside its plot area.
+
+        Only subplots that have explicit user-supplied labels AND have not had
+        their legend suppressed (ax.legend(False)) are processed.  Each such
+        subplot's x-domain is shrunk to free space on the right, and the
+        legend is positioned in that freed space — no data overlap.
+
+        Only active when self._cols > 1; single-column figures use Plotly's
+        default placement.  Requires Plotly 5.x (legend2 / legend3 … support).
+        """
+        if self._cols <= 1 or not self._showlegend:
+            return
+
+        LEGEND_WIDTH = 0.12   # fraction of figure width reserved per legend
+
+        legend_counter = 0
+        layout_updates = {}
+
+        for ax in flat:
+            if not ax._showlegend:
+                continue
+
+            start, end = ax_trace_ranges[id(ax)]
+            if start == end:
+                continue
+
+            # Find the subplot domain via the first trace that actually shows
+            # in the legend (showlegend is not explicitly False).
+            # Traces like go.Heatmap have showlegend=False set explicitly, so
+            # they are skipped here.  If every trace is False, domain_x stays
+            # None and the axes is skipped entirely (no domain shrink).
+            domain_x, domain_y = None, None
+            xaxis_suffix = None
+            for i in range(start, end):
+                trace = fig.data[i]
+                if trace.showlegend is False:
+                    continue
+                domain_x, domain_y = self._subplot_domain(fig, trace)
+                xaxis_ref = getattr(trace, 'xaxis', None)
+                if xaxis_ref:
+                    xaxis_suffix = xaxis_ref[1:]   # 'x' -> '', 'x2' -> '2'
+                if domain_x is not None:
+                    break
+
+            if domain_x is None:
+                continue
+
+            # Shrink this subplot's x-domain to make room for the legend
+            new_x_end = domain_x[1] - LEGEND_WIDTH
+            if xaxis_suffix is not None:
+                layout_updates['xaxis' + xaxis_suffix] = dict(
+                    domain=[domain_x[0], new_x_end]
+                )
+
+            # Place the named legend just to the right of the shrunken domain
+            legend_name = 'legend' if legend_counter == 0 else f'legend{legend_counter + 1}'
+            layout_updates[legend_name] = dict(
+                x=new_x_end + 0.01,
+                xanchor='left',
+                y=domain_y[1] if domain_y else 1.0,
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.8)',
+                bordercolor='rgba(0,0,0,0.15)',
+                borderwidth=1,
+            )
+
+            for i in range(start, end):
+                if fig.data[i].showlegend is not False:
+                    fig.data[i].update(legend=legend_name)
+
+            legend_counter += 1
+
+        if layout_updates:
+            fig.update_layout(**layout_updates)
+
     def _build_figure(self, done):
         flat = self._flat_axes()
         subplot_titles = [ax._title or "" for ax in flat]
@@ -189,9 +290,15 @@ class ProgressiveFigure:
             specs=self._build_specs(),
             horizontal_spacing=self._h_spacing(flat),
         )
+
+        # Add traces and record which trace indices belong to each axes
+        ax_trace_ranges = {}
         for ax in flat:
+            start = len(fig.data)
             for trace in ax._build_traces():
                 fig.add_trace(trace, row=ax._row, col=ax._col)
+            ax_trace_ranges[id(ax)] = (start, len(fig.data))
+
             if ax._has_pie():
                 continue  # pie subplots have no x/y axes to label
             if ax._xlabel:
@@ -205,20 +312,21 @@ class ProgressiveFigure:
 
         # Reposition colorbars to appear immediately right of their own subplot
         # (mirrors matplotlib's fig.colorbar(im, ax=ax) behaviour).
-        # Applies to any trace type that supports showscale (Heatmap, Contour,
-        # Scatter with colorscale, etc.) when there are multiple columns.
         if self._cols > 1:
             for i, trace in enumerate(fig.data):
                 if not getattr(trace, 'showscale', False):
                     continue
                 xaxis_ref = getattr(trace, 'xaxis', None) or 'x'
-                axis_key = 'xaxis' + xaxis_ref[1:]  # 'x' -> 'xaxis', 'x2' -> 'xaxis2'
+                axis_key = 'xaxis' + xaxis_ref[1:]
                 domain = fig.layout[axis_key].domain
                 fig.data[i].update(colorbar=dict(
                     x=domain[1] + 0.01,
                     xanchor='left',
-                    thickness=15,       # slimmer bar to fit in the gap
+                    thickness=15,
                 ))
+
+        # Position each subplot's legend inside that subplot
+        self._reposition_subplot_legends(fig, ax_trace_ranges, flat)
 
         return self._apply_layout(fig, done)
 

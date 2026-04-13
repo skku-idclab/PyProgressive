@@ -421,6 +421,19 @@ class ProgressiveAxes:
         """Return True if this axes has any trace that will show a colorscale bar."""
         return any(b.get('showscale', True) for b in self._heatmap_bindings)
 
+    def _has_explicit_labels(self):
+        """Return True if any bound trace has a user-provided label.
+
+        Used by ProgressiveFigure to decide whether to allocate legend space
+        for this subplot.  Heatmap / pie are excluded because they do not
+        produce conventional legend entries.
+        """
+        return (
+            any(b["label"] is not None for b in self._line_bindings) or
+            any(b["label"] is not None for b in self._scatter_bindings) or
+            any(b["label"] is not None for b in self._bar_bindings)
+        )
+
     def _get_shapes(self, xref, yref):
         """Return Plotly shape dicts for axhline / axvline on this subplot.
 
@@ -652,6 +665,7 @@ class ProgressiveAxes:
                 values=pie_values,
                 hole=pie_hole,
                 textinfo="label+percent",
+                showlegend=False,   # labels already shown on slices via textinfo
             )
             if pie_colors is not None:
                 pie_kwargs["marker"] = dict(colors=pie_colors)
@@ -676,7 +690,7 @@ class ProgressiveAxes:
                 kwargs["zmax"] = b["zmax"]
             if b["zmin"] is not None and b["zmax"] is not None:
                 kwargs["zmid"] = (b["zmin"] + b["zmax"]) / 2
-            traces.append(go.Heatmap(**kwargs))
+            traces.append(go.Heatmap(showlegend=False, **kwargs))
 
         if not self._showlegend:
             for trace in traces:

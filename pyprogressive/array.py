@@ -17,6 +17,9 @@ class array:
         # after dropna() or boolean filtering, causing KeyError on integer access.
         if hasattr(data, 'iloc'):
             data = data.tolist()
+        elif not isinstance(data, list):
+            # Accept any iterable (zip, generator, tuple, …) by materialising it.
+            data = list(data)
         self.data = data
         self.length = len(data)
         self.iter = 0
