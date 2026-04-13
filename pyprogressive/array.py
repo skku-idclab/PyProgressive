@@ -6,9 +6,14 @@ def reset():
     """Clear all tracked arrays and reset the id counter.
     Call this at the start of each independent computation to avoid
     leftover arrays from previous cells causing length-mismatch errors.
+    Also resets the live vis chart state if pyprogressive.vis is imported.
     """
+    import sys
     global_arraylist.clear()
     array._id = 0
+    vis = sys.modules.get('pyprogressive.vis')
+    if vis is not None:
+        vis._live_reset()
 
 class array:
     _id = 0
@@ -20,6 +25,11 @@ class array:
         elif not isinstance(data, list):
             # Accept any iterable (zip, generator, tuple, …) by materialising it.
             data = list(data)
+            # Unwrap 1-element tuples produced by zip(single_iterable).
+            # zip(series) yields (val,) tuples; the downstream BQ code expects
+            # plain scalars for non-grouped data.
+            if data and isinstance(data[0], tuple) and len(data[0]) == 1:
+                data = [x[0] for x in data]
         self.data = data
         self.length = len(data)
         self.iter = 0
