@@ -485,3 +485,23 @@ def bar(values, label=None, title=None, xlabel=None, ylabel=None, figsize=None):
     if xlabel:  ax.set_xlabel(xlabel)
     if ylabel:  ax.set_ylabel(ylabel)
     ax.bar(values, label=label)
+
+
+def pie(values, hole=0.0, title=None, figsize=None):
+    """Render a pie (or donut) chart snapshot on the single live chart.
+
+    *values* should be a dict ``{key: value}`` (GroupBy result).
+    *hole* controls the donut cutout: 0.0 = full pie, 0.4 = donut.
+
+    Example::
+
+        for state in program.run(interval=0.5):
+            pp.vis.pie(state.value(group_counts), title="Count by Group")
+
+        # Donut
+        for state in program.run(interval=0.5):
+            pp.vis.pie(state.value(proportions), hole=0.4, title="Share by Group")
+    """
+    _, ax = subplots(1, 1, figsize=figsize)
+    if title:  ax.set_title(title)
+    ax.pie(values, hole=hole)
