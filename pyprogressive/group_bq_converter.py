@@ -66,7 +66,12 @@ def sympy_to_BQ_node(expr):
                 return BQ(bqnum, bqarridx, name)
             else:
                 bqnum = name.split("_")[1]
-                return GBQ(bqnum, 0, 1, name)
+                col_str = name.split("_")[-1]
+                try:
+                    col = int(col_str)
+                except ValueError:
+                    col = 1  # legacy "idx" fallback
+                return GBQ(bqnum, col, 1, name)
         
 
         if name.startswith("DataLength_"):
@@ -228,8 +233,9 @@ def transform_expr(expr: Expr) -> Expr:
     # convert them to the respective BQ symbol form.
     if expr.is_Pow:
         base, exponent = expr.as_base_exp()
-        if base.is_Symbol and base.name == "arr_GToken" and exponent.is_Integer:
-            return Mul(1, Symbol(f"GBQ_{int(exponent)}_of_idx"))
+        if base.is_Symbol and base.name.startswith("arr_GToken") and exponent.is_Integer:
+            col = base.name[len("arr_GToken_"):] if len(base.name) > len("arr_GToken") else "1"
+            return Mul(1, Symbol(f"GBQ_{int(exponent)}_of_{col}"))
         
         # 기존: base가 "arr_<number>" 인 경우 처리 (예: arr_1**2 -> BQ_2_of_1)
         if base.is_Symbol:
@@ -245,8 +251,9 @@ def transform_expr(expr: Expr) -> Expr:
     # General symbol handling for simple symbols 
     if expr.is_Symbol:
         # 추가: "arr_GToken"인 경우
-        if expr.name == "arr_GToken":
-            return Mul(1, Symbol("GBQ_1_of_idx"))
+        if expr.name.startswith("arr_GToken"):
+            col = expr.name[len("arr_GToken_"):] if len(expr.name) > len("arr_GToken") else "1"
+            return Mul(1, Symbol(f"GBQ_1_of_{col}"))
         # 기존: "arr_<number>" 형태 처리 (예: arr_1 -> BQ_1_of_1)
         if expr.name.startswith("arr_"):
             match = re.fullmatch(r'arr_(\d+)', expr.name)

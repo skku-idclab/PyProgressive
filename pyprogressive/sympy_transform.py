@@ -22,7 +22,11 @@ def node_to_sympy_expr(node):
     if isinstance(node, float):
         return sympy.Float(node)
     if isinstance(node, DataItemToken):
-        symbol_name = "arr_" + str(node.id)
+        if node.id == "GToken" and node.index >= 0:
+            # Encode value column so group_by_bq_update can use the right column
+            symbol_name = f"arr_GToken_{node.index}"
+        else:
+            symbol_name = "arr_" + str(node.id)
         token_map[symbol_name] = node
         return Symbol(symbol_name)
     if isinstance(node, DataLengthToken):
