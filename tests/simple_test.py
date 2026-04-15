@@ -1,11 +1,13 @@
 import pyprogressive as pp
-from pyprogressive.midlevel import each, accum, group, G
+from pyprogressive import each, accum
 
-if __name__ == "__main__":  
+if __name__ == "__main__":
+    pp.reset()
     array0 = pp.array([1, 2, 3, 4, 5, 6])
-    wholesum = accum(each(array0)/len(array0))
-    #var = accum((each(array0)-wholesum)**2)
+    mean = accum(each(array0)) / len(array0)
 
+    compiled = pp.compile(mean)
+    for state in compiled.run(interval=0):
+        pass
 
-    compiled = pp.compile(wholesum)
-    compiled.run(interval = 0, callback = lambda var: print(var))
+    print(f"mean = {state.value(mean):.4f}")   # expected: 3.5

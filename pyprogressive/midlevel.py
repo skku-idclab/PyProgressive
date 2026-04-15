@@ -38,7 +38,7 @@ class IterState:
         self._results   = list(results)   # shallow copy — results list is reused
         self._var_index = var_index
         self.done       = elapsed_obj.done
-        self.t          = elapsed_obj.elapsed()
+        self.elapsed    = elapsed_obj.elapsed()
         self.progress   = (elapsed_obj.current / elapsed_obj.total
                            if elapsed_obj.total > 0 else 0.0)
 

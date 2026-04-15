@@ -13,8 +13,9 @@ def detect_group_bq(expr, BQ_dict, idx):
         array = global_arraylist[array_index]
         whole_length = len(array)
         item = array.data[idx]
-        BQ_str_grouplength_rate = "BQ_grouplength_"+str(item[group_index])+"_lengthrate_of_"+str(array_index)
-        BQ_str_eval = "BQ_group_"+str(item[group_index])+"_" 
+        group_key = item if group_index == -1 else item[group_index]
+        BQ_str_grouplength_rate = "BQ_grouplength_"+str(group_key)+"_lengthrate_of_"+str(array_index)
+        BQ_str_eval = "BQ_group_"+str(group_key)+"_"
         BQ_str_dict = {}
         BQ_group_dict = {}
 
@@ -50,8 +51,8 @@ def group_by_bq_update(BQ_dict, idx):
             using_array_idx = key_str[-1]
             using_array = global_arraylist[int(using_array_idx)]
             item = using_array.data[idx]
-            group_index = 0 # TODO: need to fix here for group index
-            if key_str[2] == item[group_index]:
+            group_key = str(item) if not isinstance(item, tuple) else str(item[0])
+            if key_str[2] == group_key:
                 BQ_dict[key] = (BQ_dict[key] * (idx) + 1) / (idx+1)
             else:
                 BQ_dict[key] = BQ_dict[key] * (idx) / (idx+1)
@@ -66,8 +67,8 @@ def group_by_bq_update(BQ_dict, idx):
         using_array_idx = key_str[-1]
         using_array = global_arraylist[int(using_array_idx)]
         item = using_array.data[idx]
-        group_index = 0 
-        if key_str[1] == "group" and key_str[2] == item[group_index]:
+        group_key = str(item) if not isinstance(item, tuple) else str(item[0])
+        if key_str[1] == "group" and key_str[2] == group_key:
             degree, compute_arr = key_str[4], key_str[6]
             target_arr = None
             for array in global_arraylist:
