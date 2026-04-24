@@ -120,6 +120,9 @@ class GroupBy(Node):
         self.expr = expr
         self.val = None
 
+    def value(self):
+        return self.val
+
     def __str__(self):
         return f"GroupBy_{self.group_index}"
 
