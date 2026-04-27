@@ -3,6 +3,10 @@ class Node:
     """represents a node in the expression tree"""
     def __init__(self, expr):
         self.expr = expr
+        self.val  = None
+
+    def value(self):
+        return self.val
 
     def __str__(self):
         return self.__class__.__name__
